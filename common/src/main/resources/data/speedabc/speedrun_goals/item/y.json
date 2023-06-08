@@ -1,0 +1,9 @@
+{
+  "display": {
+    "translate": "speedrun.alphabet.speedrun_goals.speedabc.y"
+  },
+  "items": ["#speedabc:y"],
+  "icon": {
+    "item": "yellow_bed"
+  }
+}

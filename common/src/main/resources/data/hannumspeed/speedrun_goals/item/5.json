@@ -1,0 +1,9 @@
+{
+  "display": {
+    "translate": "speedrun.alphabet.speedrun_goals.hannumspeed.5"
+  },
+  "items": ["#hannumspeed:len_5"],
+  "icon": {
+    "item": "acacia_boat"
+  }
+}

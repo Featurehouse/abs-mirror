@@ -1,0 +1,9 @@
+{
+  "display": {
+    "translate": "speedrun.alphabet.speedrun_goals.hannumspeed.10"
+  },
+  "items": ["#hannumspeed:len_10"],
+  "icon": {
+    "item": "waxed_exposed_cut_copper_slab"
+  }
+}

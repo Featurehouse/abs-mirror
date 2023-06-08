@@ -1,0 +1,9 @@
+{
+  "display": {
+    "translate": "speedrun.alphabet.speedrun_goals.speedabc.d"
+  },
+  "items": ["#speedabc:d"],
+  "icon": {
+    "item": "deepslate_emerald_ore"
+  }
+}

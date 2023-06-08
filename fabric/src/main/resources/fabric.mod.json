@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "alphabet_speedrun",
+  "version": "${version}",
+  "name": "αβspeedrun",
+  "description": "Collect the items you want!",
+  "authors": [
+    "teddyxlandlee",
+    "2333tech",
+    "Peterice",
+    "Pigeonia Featurehouse"
+  ],
+  "contact": {
+    "email": "featurehouse@outlook.com"
+  },
+  "icon": "assets/alphabet_speedrun/icon_fabric.png",
+  "license": "${modlicense}",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "org.featurehouse.mcmod.speedrun.alphabeta.fabric.AlphabetSpeedrunFabric"
+    ],
+    "client": [
+      "org.featurehouse.mcmod.speedrun.alphabeta.fabric.AlphabetSpeedrunFabric::initClient"
+    ]
+  },
+  "mixins": [
+    "alphabet-speedrun.common.mixins.json"
+  ],
+  "suggests": {
+    "quilt_loader": "*"
+  },
+  "provides": [
+    "fireworksnodec",
+    "speedabc"
+  ],
+  "depends": {
+    "fabric-api": "*",
+    "minecraft": ">=1.19.4",
+    "architectury": ">=8"
+  }
+}

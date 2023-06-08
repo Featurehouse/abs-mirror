@@ -1,0 +1,9 @@
+Title: Coop interaction command
+
+The "text buttons" would lead the command executor to execute an internal command (like /internalitemspeedrun).
+This command has human-readable parameter name. However, if the command executor isn't
+ running an INTERACTION SESSION, then it will raise an error to the executor which looks like:
+		This command is unsupported. Do you mean '/xxx xxx'?
+The message above must be localized.
+
+Edit [Mon 28 Nov 2022 12:30]: interaction might be replaced with draft.

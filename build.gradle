@@ -1,0 +1,199 @@
+import java.nio.file.Files
+
+plugins {
+    id "architectury-plugin" version "3.4-SNAPSHOT"
+    id "dev.architectury.loom" version "1.1-SNAPSHOT" apply false
+    id 'org.cadixdev.licenser' version '0.6.1' apply false
+}
+
+architectury {
+    minecraft = rootProject.minecraft_version
+}
+
+ext.isDemoVersion = ext.has("abs.demo") && ext["abs.demo"] == 'true'
+ext.modLicense = ext.isDemoVersion ? "ARR" : "AGPL-3.0-or-later"
+
+allprojects {
+    repositories {
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        maven { url 'https://lss233.littleservice.cn/repositories/minecraft' }
+        maven { url "https://maven.shedaniel.me/" }
+    }
+}
+
+tasks.register('linkAllDependenciesToTemp')
+
+subprojects {
+    buildscript {
+        repositories {
+            maven { url 'https://maven.aliyun.com/repository/public' }
+            maven { url "https://covid-trump.github.io/mvn/" }
+            //@Deprecated def _ = mavenLocal()
+        }
+        dependencies {
+            classpath("xland.gradle:ABSScripts:6.0.0")
+            classpath("xland.gradle:ABSApiJarHelper:1.0.3")
+            classpath("com.guardsquare:proguard-gradle:7.2.2")
+        }
+    }
+
+    apply plugin: "dev.architectury.loom"
+
+    loom {
+        silentMojangMappingsLicense()
+    }
+
+    dependencies {
+        minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
+        // The following line declares the mojmap mappings, you may use other mappings as well
+        //mappings loom.officialMojangMappings()
+        // The following line declares the yarn mappings you may select this one as well.
+        mappings "net.fabricmc:yarn:${rootProject.yarn_version}:v2"
+    }
+
+    tasks.register('linkDependenciesToTemp') {
+        doLast {
+            def rootPath = Files.createTempDirectory("${project.name}-${UUID.randomUUID()}").toAbsolutePath()
+            println "Dependencies of Project ${project.getDisplayName()} are linked to $rootPath"
+            configurations.compileClasspath.getFiles().forEach { f ->
+                java.nio.file.Path path = f.toPath()
+                //Files.copy(path, rootPath.resolve(path.fileName))
+                Files.createSymbolicLink(rootPath.resolve(path.fileName), path.toAbsolutePath())
+            }
+        }
+    }
+    rootProject.tasks.linkAllDependenciesToTemp.dependsOn linkDependenciesToTemp
+}
+
+allprojects {
+    apply plugin: "java"
+    apply plugin: "architectury-plugin"
+    apply plugin: "maven-publish"
+    apply plugin: "org.cadixdev.licenser"
+
+    archivesBaseName = rootProject.archives_base_name
+    version = rootProject.mod_version
+    group = rootProject.maven_group
+
+    repositories {
+        maven { url 'https://maven.aliyun.com/repository/public' }
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = "UTF-8"
+        options.release.set(17)
+    }
+
+    java {
+        withSourcesJar()
+    }
+
+    license {
+    	ignoreFailures = true
+        include "**/*.java"
+        include "./*.gradle"
+        //skipExistingHeaders true
+        charset 'utf-8'
+        header rootProject.file('HEADER.txt')
+        exclude '**/qj5/**/*.java'
+    }
+}
+
+tasks.register('publicReleaseCopyrightZip', Zip) {
+    // Legal and Sources
+    from (files('LICENSE.txt', 'NOTICE.txt')) {
+        into 'legal'
+    }
+    ['fabric', 'forge'].each {p ->
+        from ("$p/build/alphabetSpeedrun/proguard.dict") {
+            into "legal/$p"
+        }
+        from ("$p/build/alphabetSpeedrun/stub.dat") {
+            into "legal/$p"
+        }
+        from ("$p/build/proguardJar/conf-${project.version}.txt") {
+            into "legal/$p"
+        }
+        from ("$p/build/proguardJar/mapping-${project.version}.txt") {
+            into "legal/$p"
+        }
+        from ("$p/build/deploy/alphabet-speedrun-$p-${project.version}-sources.jar") {
+            into "develop/$p"
+        }
+        from ("$p/build/libs/alphabet-speedrun-${project.version}-api.jar") {
+            into "develop/$p"
+        }
+    }
+    ['common', 'fabric', 'forge'].each {p ->
+        from("$p/src/main/java") {
+            into "develop/$p/sources"
+        }
+    }
+    destinationDirectory.set new File(buildDir, 'libs')
+    archiveClassifier.set 'public'
+}
+
+tasks.register('zipAbsBundle', Zip) {
+    from ('extension-packs/abs-bundle')
+    destinationDirectory.set new File(buildDir, 'libs')
+    archiveClassifier.set 'abs-bundle'
+}
+
+tasks.register('zipAbsUpdate120', Zip) {
+    from ('extension-packs/abs-update-120')
+    destinationDirectory.set new File(buildDir, 'libs')
+    archiveClassifier.set 'abs-update-120'
+}
+
+tasks.register('publicReleasePack', Copy) {
+    dependsOn 'publicReleaseCopyrightZip'
+    ['fabric', 'forge'].each { p ->
+        from ("$p/build/deploy/alphabet-speedrun-$p-${project.version}.jar")
+    }
+    from publicReleaseCopyrightZip
+    from (zipAbsBundle) {
+        rename { "abs-bundle-${project.version}-datapack.zip" }
+    }
+    from (zipAbsUpdate120) {
+        rename { "abs-update-120-${project.version}-datapack.zip" }
+    }
+    def dest = new File(buildDir, 'publicRelease')
+    doFirst { dest.mkdir() }
+    into dest
+}
+
+tasks.register('customerPack', Zip) {
+    //def extraDir = file('x-deploy')
+    from ('x-deploy') {
+        into ''
+    }
+    from (files('LICENSE.txt', 'NOTICE.txt')) {
+        into 'legal'
+    }
+    ['fabric', 'forge'].each {p ->
+        from ("$p/build/alphabetSpeedrun/proguard.dict") {
+            into "legal/$p"
+        }
+        from ("$p/build/alphabetSpeedrun/stub.dat") {
+            into "legal/$p"
+        }
+        from ("$p/build/proguardJar/conf-${project.version}.txt") {
+            into "legal/$p"
+        }
+        from ("$p/build/proguardJar/mapping-${project.version}.txt") {
+            into "legal/$p"
+        }
+        from ("$p/build/deploy/alphabet-speedrun-$p-${project.version}.jar") {
+            into "${p}_mods"
+            rename { l -> "[Mod]$l" }
+        }
+        from ("$p/build/deploy/alphabet-speedrun-$p-${project.version}-sources.jar") {
+            into "legal/$p"
+        }
+        from ("$p/build/libs/alphabet-speedrun-${project.version}-api.jar") {
+            into "legal/$p"
+        }
+    }
+    archiveClassifier.set 'all'
+
+}

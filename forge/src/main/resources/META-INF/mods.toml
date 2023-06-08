@@ -1,0 +1,35 @@
+modLoader = "javafml"
+loaderVersion = "[44,)"
+#issueTrackerURL = ""
+license = "${modlicense}"
+
+[[mods]]
+modId = "alphabet_speedrun"
+version = "${version}"
+displayName = "αβspeedrun"
+authors = "Pigeonia Featurehouse,teddyxlandlee,2333tech,Peterice"
+description = '''
+Collect the items you want!
+'''
+#logoFile = ""
+
+[[dependencies.alphabet_speedrun]]
+modId = "forge"
+mandatory = true
+versionRange = "[44,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.alphabet_speedrun]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.19.4,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.alphabet_speedrun]]
+modId = "architectury"
+mandatory = true
+versionRange = "[8,)"
+ordering = "AFTER"
+side = "BOTH"

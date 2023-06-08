@@ -1,0 +1,33 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:name_tag",
+    "minecraft:nautilus_shell",
+    "minecraft:netherite_axe",
+    "minecraft:netherite_block",
+    "minecraft:netherite_boots",
+    "minecraft:netherite_chestplate",
+    "minecraft:netherite_helmet",
+    "minecraft:netherite_hoe",
+    "minecraft:netherite_ingot",
+    "minecraft:netherite_leggings",
+    "minecraft:netherite_pickaxe",
+    "minecraft:netherite_scrap",
+    "minecraft:netherite_shovel",
+    "minecraft:netherite_sword",
+    "minecraft:netherrack",
+    "minecraft:nether_brick",
+    "minecraft:nether_bricks",
+    "minecraft:nether_brick_fence",
+    "minecraft:nether_brick_slab",
+    "minecraft:nether_brick_stairs",
+    "minecraft:nether_brick_wall",
+    "minecraft:nether_gold_ore",
+    "minecraft:nether_quartz_ore",
+    "minecraft:nether_sprouts",
+    "minecraft:nether_star",
+    "minecraft:nether_wart",
+    "minecraft:nether_wart_block",
+    "minecraft:note_block"
+  ]
+}

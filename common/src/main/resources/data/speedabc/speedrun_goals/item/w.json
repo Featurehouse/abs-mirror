@@ -1,0 +1,9 @@
+{
+  "display": {
+    "translate": "speedrun.alphabet.speedrun_goals.speedabc.w"
+  },
+  "items": ["#speedabc:w"],
+  "icon": {
+    "item": "wheat"
+  }
+}

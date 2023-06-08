@@ -1,0 +1,9 @@
+{
+  "display": {
+    "translate": "speedrun.alphabet.speedrun_goals.speedabc.h"
+  },
+  "items": ["#speedabc:h"],
+  "icon": {
+    "item": "honey_bottle"
+  }
+}

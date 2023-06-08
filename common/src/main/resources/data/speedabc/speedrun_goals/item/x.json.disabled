@@ -1,0 +1,10 @@
+{
+  "_deprecation": "EMPTY",
+  "display": {
+    "translate": "speedrun.alphabet.speedrun_goals.speedabc.x"
+  },
+  "items": ["#speedabc:x"],
+  "icon": {
+    "item": "barrier"
+  }
+}

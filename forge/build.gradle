@@ -1,0 +1,295 @@
+import xland.ioutils.modhalfencrypt.api.MCPlatform
+import xland.ioutils.modhalfencrypt.api.jar.JarProcessor
+
+plugins {
+    id("com.github.johnrengelman.shadow") version "7.1.2"
+}
+
+//apply from: '../gradle/crypto.gradle'
+
+architectury {
+    platformSetupLoomIde()
+    forge()
+}
+
+ext {
+    mcPlatform = MCPlatform.FORGE
+    absCustomerId = MHEUtil.orElse(System.getenv('ABS_CUSTOMER_ID')) { MHEUtil.extOrElse(rootProject.ext, 'abs.customer_id', '???') }
+    absPubKey = MHEUtil.orElse(System.getenv('ABS_PUB_KEY')) { MHEUtil.extOrElse(rootProject.ext, 'abs.encrypt_public_key', '/dev/null') }
+    proguardRepackagePackageSuffix = 'v303m'
+}
+
+def isDemoBuild = rootProject.isDemoVersion || MHEUtil.run(String.valueOf(absCustomerId)) {
+    it == null || it.isBlank() || it in ['???', 'null']
+}
+if (isDemoBuild)
+    logger.warn("[ABS] ${project.displayName} is a demo build")
+else
+    logger.lifecycle("[ABS] ${project.displayName} Platform=$mcPlatform Customer=$absCustomerId PubKeyIn=$absPubKey")
+
+loom {
+    accessWidenerPath = project(':common').loom.accessWidenerPath
+    
+    forge {
+        convertAccessWideners.set(true)
+        extraAccessWideners.add(loom.accessWidenerPath.get().asFile.name)
+
+        //mixinConfig("abs-legacy.mixins.json")
+        mixinConfig("alphabet-speedrun.common.mixins.json")
+        mixinConfig("abs-forge.mixins.json")
+    }
+}
+
+configurations {
+    common
+    shadowCommon
+    compileClasspath.extendsFrom common
+    runtimeClasspath.extendsFrom common
+    developmentForge.extendsFrom common
+}
+
+dependencies {
+    forge "net.minecraftforge:forge:${rootProject.forge_version}"
+    modApi "dev.architectury:architectury-forge:${rootProject.architectury_version}"
+    
+    common(project(path: ':common', configuration: 'namedElements')) { transitive = false }
+    shadowCommon(project(path: ':common', configuration: 'transformProductionForge')) { transitive = false }
+}
+
+def absRootDir = new File(buildDir, 'alphabetSpeedrun')
+absRootDir.mkdir()
+
+def theStubFile = new File(absRootDir, 'stub.dat')
+def theStubDictFile = new File(absRootDir, 'proguard.dict')
+
+tasks.register('generateAlData', GenerateAlData.class)
+tasks.register('rollRandomSeeds', RollRandomSeeds.class) {
+	dependsOn generateAlData
+    seedSup = generateAlData.seed
+    stubFile = theStubFile
+    stubDictFile = theStubDictFile
+}
+
+def proguardCacheDir = new File(buildDir, 'proguardJar')
+def proguardOutput = new File(proguardCacheDir, "${project.name}-proguard-dev-${project.version}.jar")
+def proguardPreObfFile = new File(proguardCacheDir, "${project.name}-proguard-preobf-${project.version}.jar")
+
+shadowJar {
+    exclude("architectury.common.json", 'fabric.mod.json')
+
+    configurations = [project.configurations.shadowCommon]
+    archiveClassifier.set("dev-shadow")
+}
+
+def apiJarFile = new File(absRootDir, "${project.name}-${project.version}-api.jar")
+
+tasks.register('genApiJar') {
+    dependsOn shadowJar
+    doLast {
+        def c = new xland.gradle.absapijarhelper.ApiJarRun()
+        c.accept shadowJar.archiveFile.get().asFile, apiJarFile
+    }
+}
+
+tasks.register('demoExclusions', Jar) {
+    dependsOn shadowJar
+    from (zipTree(shadowJar.archiveFile)) {
+        exclude 'data/'
+        exclude "META-INF/LICENSE_${rootProject.archivesBaseName}.txt"
+        exclude "META-INF/NOTICE_${rootProject.archivesBaseName}.txt"
+    }
+    destinationDirectory = absRootDir
+    archiveClassifier.set 'exclusion'
+}
+
+tasks.register('obfDemoJar', proguard.gradle.ProGuardTask) {
+    dependsOn demoExclusions
+    injars demoExclusions.archiveFile
+    outjars new File(absRootDir, "obfdemo.jar")
+    outputs.upToDateWhen { return false }
+    doFirst {
+        libraryjars System.getProperty('java.home') + '/jmods'
+        libraryjars configurations.compileClasspath.files
+        libraryjars configurations.modCompileClasspath.files
+    }
+    dontwarn()
+
+    configuration rootProject.file('democonf.pro')
+
+    printmapping new File(proguardCacheDir, "mapping-${project.version}-DEMO.txt")
+    repackageclasses("org.featurehouse.mcmod.speedrun.alphabeta.${project.proguardRepackagePackageSuffix}_DEMO")
+}
+
+tasks.withType(net.fabricmc.loom.task.PrepareJarRemapTask).configureEach {
+    if (name == 'prepareRemapObfDemoJar') {
+        mustRunAfter obfDemoJar
+    } else if (name == 'prepareRemapApiJar') {
+        mustRunAfter genApiJar
+    }
+}
+
+tasks.register('remapApiJar', net.fabricmc.loom.task.RemapJarTask) {
+    injectAccessWidener = true
+    archiveClassifier.set 'api'
+
+    dependsOn genApiJar
+    inputFile.set apiJarFile
+}
+
+tasks.register('remapObfDemoJar', net.fabricmc.loom.task.RemapJarTask) {
+    injectAccessWidener = true
+    archiveClassifier.set 'demo'
+
+    dependsOn obfDemoJar
+    inputFile.set new File(absRootDir, 'obfdemo.jar')
+}
+
+tasks.register('preObfProcess', MapJar) {
+    dependsOn generateAlData, shadowJar
+    mustRunAfter 'shadowJar'
+    jarIn = file(shadowJar.archiveFile)
+    jarOut = proguardPreObfFile
+    alData = generateAlData.seed
+    rsaEncrypter = generateAlData.pubKey
+    jarMapper {
+        it.addProcessor new PreObfProcessor()
+    }
+}
+
+tasks.register('proguardJar', proguard.gradle.ProGuardTask) {
+    dependsOn preObfProcess
+    //dependsOn jar, shadowJar
+    dependsOn rollRandomSeeds
+    
+    injars proguardPreObfFile
+    outjars proguardOutput
+    doFirst {
+    	libraryjars System.getProperty('java.home') + '/jmods'
+    	libraryjars configurations.compileClasspath.files
+    	libraryjars configurations.modCompileClasspath.files
+    }
+    outputs.upToDateWhen { return false }
+    dontwarn()
+    
+    classobfuscationdictionary rollRandomSeeds.stubDictFile
+    configuration rootProject.file('rootconf.pro')
+
+    printmapping new File(proguardCacheDir, "mapping-${project.version}.txt")
+    repackageclasses("org.featurehouse.mcmod.speedrun.alphabeta.${project.proguardRepackagePackageSuffix}")
+    printconfiguration new File(proguardCacheDir, "conf-${project.version}.txt")
+}
+
+File postObfOutput = new File(proguardCacheDir, "${project.name}-proguard-postobf-${project.version}.jar")
+
+tasks.register('postObfProcess', MapJar) {
+    dependsOn generateAlData, proguardJar
+    jarIn = proguardOutput
+    jarOut = postObfOutput
+    alData = generateAlData.seed
+    rsaEncrypter = generateAlData.pubKey
+    jarMapper {
+        it.addProcessor new PostObfProcessor()
+    }
+}
+
+def deployDir = new File(buildDir, 'deploy')
+deployDir.mkdir()
+
+tasks.register('postInjectJar', MapJar) {
+    dependsOn(generateAlData, remapJar)
+    jarIn = file(remapJar.archiveFile)
+    jarOut = new File(deployDir, "${rootProject.archives_base_name}-${project.name}-${project.version}.jar")
+    alData = generateAlData.seed
+    rsaEncrypter = generateAlData.pubKey
+    jarMapper {
+        it.addProcessor JarProcessor.Defaults.$$INSTANCE.jsonAes([
+            "assets/speedabc/lang/en_us.json",
+            "assets/alphabet_speedrun/lang/en_us.json",
+            "assets/hannumspeed/lang/zh_cn.json",
+            "data/speedabc/speedrun_goals/item/u.json.disabled",
+            "data/hannumspeed/tags/items/len_2.json",
+            'pack.mcmeta'
+        ], new String[0])
+        //it.addProcessor JarProcessor.jsonAes(['fabric.mod.json'], 'custom')
+        it.addProcessor JarProcessor.Defaults.$$INSTANCE.signClass()
+    }
+}
+
+tasks.register('postInjectSourcesJar', MapJar) {
+    dependsOn generateAlData, remapSourcesJar
+    jarIn = file(remapSourcesJar.archiveFile)
+    jarOut = new File(deployDir, "${rootProject.archives_base_name}-${project.name}-${project.version}-sources.jar")
+    alData = generateAlData.seed
+    rsaEncrypter = generateAlData.pubKey
+    jarMapper {
+        it.addProcessor(JarProcessor.Defaults.$$INSTANCE.jsonAes([
+            'pack.mcmeta',
+            "assets/speedabc/lang/en_us.json",
+            "assets/alphabet_speedrun/lang/en_us.json",
+            "assets/hannumspeed/lang/zh_cn.json",
+            "data/speedabc/speedrun_goals/item/u.json.disabled",
+            "data/hannumspeed/tags/items/len_2.json"
+        ], new String[0]))
+        //it.addProcessor(JarProcessor.jsonAes(['fabric.mod.json'], 'custom'))
+    }
+}
+
+if (!isDemoBuild) {
+	prepareRemapJar.mustRunAfter postObfProcess
+	//prepareRemapSourcesJar.mustRunAfter proguardJar
+    build.dependsOn postInjectJar, postInjectSourcesJar, remapApiJar
+    remapApiJar.mustRunAfter remapJar
+    remapApiJar.mustRunAfter remapSourcesJar
+    remapApiJar.mustRunAfter project(':fabric').remapApiJar
+}
+
+processResources {
+    def map = ['version': project.version, 'modlicense': rootProject.modLicense]
+
+    inputs.properties map
+    filesMatching("META-INF/mods.toml") {
+        expand map
+    }
+    if (!isDemoBuild) {
+        dependsOn(rollRandomSeeds)
+        from(theStubFile) {
+            rename { "data/speedabc/speedrun_goals/item/ispr.db" }
+        }
+    }
+}
+
+remapJar {
+    injectAccessWidener = true
+    if (isDemoBuild) {
+        inputFile.set(shadowJar.archiveFile)
+        dependsOn(shadowJar)
+    } else {
+        dependsOn postObfProcess
+        inputFile.set postObfOutput
+    }
+    archiveClassifier = null
+}
+
+jar.archiveClassifier = 'dev'
+
+sourcesJar {
+    def commonSources = project(':common').sourcesJar
+    dependsOn commonSources
+    from(commonSources.archiveFile.map { zipTree(it) })
+}
+
+components.java {
+    withVariantsFromConfiguration(project.configurations.shadowRuntimeElements) {
+        skip()
+    }
+}
+
+publishing {
+    publications {
+        create('mavenForge', MavenPublication) {
+            artifactId = "${rootProject.archives_base_name}-${project.name}"
+            from components.java
+        }
+    }
+}
+ 

@@ -1,0 +1,8 @@
+{
+  "accessWidener": "alphabet-speedrun.aw",
+  "injected_interfaces": {
+    "net/minecraft/class_3222": [
+      "org/featurehouse/mcmod/speedrun/alphabeta/item/InternalItemCollector"
+    ]
+  }
+}

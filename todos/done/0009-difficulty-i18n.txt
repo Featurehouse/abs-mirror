@@ -1,0 +1,6 @@
+Title: Difficulty i18n
+
+Difficulties should be localized as text.
+Considering backwards compatibility, the interface should define a default method
+  which returns a literal text containing the id itself.
+A description might be required.

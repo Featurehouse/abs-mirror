@@ -1,0 +1,17 @@
+Title: Proguard Obfuscation
+
+Date: Fri 20 Jan 2023 11:15
+
+@ApiStatus.Internal things should be obfuscated:
+- classes with @Internal should be obfuscated
+- methods/fields with @Internal should be obfuscated
+
+How to process:
+- pre-process before `proguardJar`, using ASM core api
+- if non-class or class is @Internal, skip the class
+- if class is non-@Internal, mark as @abs.generated.NonInternal
+- if method/field is public/protected AND non-@Internal, mark as @abs.generated.NonInternal (RuntimeInvisible)
+- in proguard: ```
+	keepnames '@abs.generated.NonInternal public class *'
+	keepclassmembernames 'public class * { @abs.generated.NonInternal *; }'
+```

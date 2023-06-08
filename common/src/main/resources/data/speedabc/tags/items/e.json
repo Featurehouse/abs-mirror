@@ -1,0 +1,29 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:echo_shard",
+    "minecraft:egg",
+    "minecraft:elytra",
+    "minecraft:emerald",
+    "minecraft:emerald_block",
+    "minecraft:emerald_ore",
+    "minecraft:enchanted_book",
+    "minecraft:enchanted_golden_apple",
+    "minecraft:enchanting_table",
+    "minecraft:ender_chest",
+    "minecraft:ender_eye",
+    "minecraft:ender_pearl",
+    "minecraft:end_crystal",
+    "minecraft:end_rod",
+    "minecraft:end_stone",
+    "minecraft:end_stone_bricks",
+    "minecraft:end_stone_brick_slab",
+    "minecraft:end_stone_brick_stairs",
+    "minecraft:end_stone_brick_wall",
+    "minecraft:experience_bottle",
+    "minecraft:exposed_copper",
+    "minecraft:exposed_cut_copper",
+    "minecraft:exposed_cut_copper_slab",
+    "minecraft:exposed_cut_copper_stairs"
+  ]
+}

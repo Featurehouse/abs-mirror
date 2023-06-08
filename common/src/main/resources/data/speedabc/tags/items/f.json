@@ -1,0 +1,25 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:feather",
+    "minecraft:fermented_spider_eye",
+    "minecraft:fern",
+    "minecraft:filled_map",
+    "minecraft:firework_rocket",
+    "minecraft:firework_star",
+    "minecraft:fire_charge",
+    "minecraft:fire_coral",
+    "minecraft:fire_coral_block",
+    "minecraft:fire_coral_fan",
+    "minecraft:fishing_rod",
+    "minecraft:fletching_table",
+    "minecraft:flint",
+    "minecraft:flint_and_steel",
+    "minecraft:flowering_azalea",
+    "minecraft:flowering_azalea_leaves",
+    "minecraft:flower_banner_pattern",
+    "minecraft:flower_pot",
+    "minecraft:furnace",
+    "minecraft:furnace_minecart"
+  ]
+}

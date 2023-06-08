@@ -1,0 +1,9 @@
+{
+  "display": {
+    "translate": "speedrun.alphabet.speedrun_goals.hannumspeed.1"
+  },
+  "items": ["#hannumspeed:len_1"],
+  "icon": {
+    "item": "arrow"
+  }
+}

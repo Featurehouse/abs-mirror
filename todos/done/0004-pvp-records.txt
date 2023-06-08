@@ -1,0 +1,9 @@
+Title: PVP Records
+
+Completely same with the ordinary ones, expect for a field showing that someone shares
+  the same session with one another.
+Example:
+    "pvp_session": "8281f7cb-6694-4972-acfc-f480baca256a"
+Players with the same nonnull session can view each other's running process
+  (if they have the permission `viewPvpMates`)
+Close reason: implemented with `trust` engine. If it doesn't work, it might be replaced with this.

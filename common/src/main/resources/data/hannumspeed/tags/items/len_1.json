@@ -1,0 +1,21 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:arrow",
+    "minecraft:bell",
+    "minecraft:book",
+    "minecraft:bow",
+    "minecraft:bowl",
+    "minecraft:bucket",
+    "minecraft:crossbow",
+    "minecraft:fern",
+    "minecraft:grass",
+    "minecraft:ice",
+    "minecraft:painting",
+    "minecraft:paper",
+    "minecraft:saddle",
+    "minecraft:snow",
+    "minecraft:string",
+    "minecraft:sugar"
+  ]
+}

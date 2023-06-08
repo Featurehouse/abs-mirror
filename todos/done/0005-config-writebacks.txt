@@ -1,0 +1,4 @@
+Title: Config write-backs
+
+Add a `schema_version` to the config. When a read JSON doesn't have this field, treat it as -1.
+    static final int CURRENT_SCHEMA = 1;

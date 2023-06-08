@@ -1,0 +1,9 @@
+{
+  "display": {
+    "translate": "speedrun.alphabet.speedrun_goals.speedabc.g"
+  },
+  "items": ["#speedabc:g"],
+  "icon": {
+    "item": "grass"
+  }
+}

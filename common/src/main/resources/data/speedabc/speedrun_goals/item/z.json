@@ -1,0 +1,9 @@
+{
+  "display": {
+    "translate": "speedrun.alphabet.speedrun_goals.speedabc.z"
+  },
+  "items": ["#speedabc:z"],
+  "icon": {
+    "item": "zombie_head"
+  }
+}

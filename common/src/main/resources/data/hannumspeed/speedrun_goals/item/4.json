@@ -1,0 +1,9 @@
+{
+  "display": {
+    "translate": "speedrun.alphabet.speedrun_goals.hannumspeed.4"
+  },
+  "items": ["#hannumspeed:len_4"],
+  "icon": {
+    "item": "acacia_wood"
+  }
+}

@@ -1,0 +1,3 @@
+Title: Item Record Messages -- optimize format of texts which represent the goals/records
+
+Date: Sat 12 Nov 2022 21:00

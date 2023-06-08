@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "package": "org.featurehouse.mcmod.speedrun.alphabeta.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+  ],
+  "mixins": [
+    "PlayerListMixin",
+    "FireworkRocketMixin",
+    "ServerPlayerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -1,0 +1,9 @@
+Title: Describe why I DON'T WANT TO write a GLFW key to pause a running record.
+
+Date: Wed 19 Oct 2022 13:30
+
+Because:
+ - in singleplayer: player can pause the game in order to pause the record immediately.
+ - in server: if the server admins have turned the config "timerPausesWhenVacant" on,
+   you can disconnect the server to pause your record. You should manually resume it
+   by typing "/itemspeedrun resume" after rejoining.

@@ -1,0 +1,9 @@
+{
+  "display": {
+    "translate": "speedrun.alphabet.speedrun_goals.speedabc.j"
+  },
+  "items": ["#speedabc:j"],
+  "icon": {
+    "item": "jukebox"
+  }
+}

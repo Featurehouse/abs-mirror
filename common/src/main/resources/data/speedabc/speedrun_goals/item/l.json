@@ -1,0 +1,9 @@
+{
+  "display": {
+    "translate": "speedrun.alphabet.speedrun_goals.speedabc.l"
+  },
+  "items": ["#speedabc:l"],
+  "icon": {
+    "item": "lodestone"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "display": {
+    "translate": "speedrun.alphabet.speedrun_goals.speedabc.n"
+  },
+  "items": ["#speedabc:n"],
+  "icon": {
+    "item": "netherite_block"
+  }
+}

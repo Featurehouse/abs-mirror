@@ -1,0 +1,27 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:tadpole_bucket",
+    "minecraft:tall_grass",
+    "minecraft:target",
+    "minecraft:terracotta",
+    "minecraft:tinted_glass",
+    "minecraft:tipped_arrow",
+    "minecraft:tnt",
+    "minecraft:tnt_minecart",
+    "minecraft:torch",
+    "minecraft:totem_of_undying",
+    "minecraft:trapped_chest",
+    "minecraft:trident",
+    "minecraft:tripwire_hook",
+    "minecraft:tropical_fish",
+    "minecraft:tropical_fish_bucket",
+    "minecraft:tube_coral",
+    "minecraft:tube_coral_block",
+    "minecraft:tube_coral_fan",
+    "minecraft:tuff",
+    "minecraft:turtle_egg",
+    "minecraft:turtle_helmet",
+    "minecraft:twisting_vines"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "pack": {
+    "pack_format": 12,
+    "description": [
+      {
+        "translate": "dataPack.speedrun.alphabet.ext.120",
+        "bold": true,
+        "color": "dark_green",
+        "fallback": "αβspeedrun: Add 1.20 Exp. Support"
+      },
+      "\n",
+      {
+        "translate": "dataPack.speedrun.alphabet.ext.120.req",
+        "color": "white",
+        "fallback": "Requires turning on vanilla 1.20 data pack"
+      }
+    ]
+  }
+}

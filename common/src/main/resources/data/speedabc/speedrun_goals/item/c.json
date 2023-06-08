@@ -1,0 +1,9 @@
+{
+  "display": {
+    "translate": "speedrun.alphabet.speedrun_goals.speedabc.c"
+  },
+  "items": ["#speedabc:c"],
+  "icon": {
+    "item": "cake"
+  }
+}
