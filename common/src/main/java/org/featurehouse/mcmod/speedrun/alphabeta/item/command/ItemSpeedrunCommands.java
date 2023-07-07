@@ -447,76 +447,48 @@ public class ItemSpeedrunCommands {
 
         // Historical compatibility
         // Shit mountain, keep
-        if (AlphabetSpeedrunConfigData.getInstance().isEnableLegacyCommands()) {
-            dispatcher.register(CommandManager.literal("speedabc")
-                    .then(CommandManager.argument("letter", StringArgumentType.word())
-                            .suggests((context, builder) -> {
-                                for (char c = 'a'; c <= 'z'; c++)
-                                    builder.suggest(String.valueOf(c));
-                                return builder.buildFuture();
-                            })
-                            //.requires(ItemSpeedrunEvents::isOp)
-                            .executes(s -> {
-                                final String letter = StringArgumentType.getString(s, "letter");
-                                if (!letter.matches("^[a-tvwyz]$"))
-                                    throw new CommandSyntaxException(CommandSyntaxException.BUILT_IN_EXCEPTIONS.literalIncorrect(),
-                                            Text.translatable("command.speedrun.alphabet.legacy.letter.expected", letter));
-                                final ServerPlayerEntity player = s.getSource().getPlayer();
-                                if (player == null) {
-                                    s.getSource().sendError(Text.translatable("command.speedrun.alphabet.players_empty"));
-                                    return 0;
-                                }
-                                final Identifier goal = new Identifier("speedabc", letter);
-                                s.getSource().sendError(Text.translatable("command.speedrun.alphabet.outdated_warning",
-                                        "/itemspeedrun start speedabc:" + letter));
-                                return ItemSpeedrunCommandHandle.start(s.getSource(), goal, Collections.singleton(player));
-                            })
-                    )
-            );
-            dispatcher.register(CommandManager.literal("hannumspeed")
-                    .then(CommandManager.argument("length", IntegerArgumentType.integer(1, 10))
-                            //.requires(ItemSpeedrunEvents::isOp)
-                            .executes(s -> {
-                                final ServerPlayerEntity player = s.getSource().getPlayer();
-                                if (player == null) {
-                                    s.getSource().sendError(Text.translatable("command.speedrun.alphabet.players_empty"));
-                                    return 0;
-                                }
-                                final String sLen = Integer.toString(IntegerArgumentType.getInteger(s, "length"));
-                                final Identifier goal = new Identifier("hannumspeed", sLen);
-                                s.getSource().sendError(Text.translatable("command.speedrun.alphabet.outdated_warning",
-                                        "/itemspeedrun start hannumspeed:" + sLen));
-                                return ItemSpeedrunCommandHandle.start(s.getSource(), goal, Collections.singleton(player));
-                            })
-                    )
-            );
-        } else {
-            // Legacy commands are disabled.
-            // sending command.speedrun.alphabet.outdated_warning only.
-            dispatcher.register(CommandManager.literal("speedabc")
-                    .then(CommandManager.argument("letter", StringArgumentType.word())
-                            .executes(s -> {
-                                final String letter = StringArgumentType.getString(s, "letter");
-                                if (!letter.matches("^[a-tvwyz]$"))
-                                    throw new CommandSyntaxException(CommandSyntaxException.BUILT_IN_EXCEPTIONS.literalIncorrect(),
-                                            Text.translatable("command.speedrun.alphabet.legacy.letter.expected", letter));
-                                s.getSource().sendError(Text.translatable("command.speedrun.alphabet.outdated_warning",
-                                        "/itemspeedrun start speedabc:" + letter));
+        dispatcher.register(CommandManager.literal("speedabc")
+                .then(CommandManager.argument("letter", StringArgumentType.word())
+                        .suggests((context, builder) -> {
+                            for (char c = 'a'; c <= 'z'; c++)
+                                builder.suggest(String.valueOf(c));
+                            return builder.buildFuture();
+                        })
+                        //.requires(ItemSpeedrunEvents::isOp)
+                        .executes(s -> {
+                            final String letter = StringArgumentType.getString(s, "letter");
+                            if (!letter.matches("^[a-tvwyz]$"))
+                                throw new CommandSyntaxException(CommandSyntaxException.BUILT_IN_EXCEPTIONS.literalIncorrect(),
+                                        Text.translatable("command.speedrun.alphabet.legacy.letter.expected", letter));
+                            final ServerPlayerEntity player = s.getSource().getPlayer();
+                            if (player == null) {
+                                s.getSource().sendError(Text.translatable("command.speedrun.alphabet.players_empty"));
                                 return 0;
-                            })
-                    )
-            );
-            dispatcher.register(CommandManager.literal("hannumspeed")
-                    .then(CommandManager.argument("length", IntegerArgumentType.integer(1, 10))
-                            .executes(s -> {
-                                final int len = (IntegerArgumentType.getInteger(s, "length"));
-                                s.getSource().sendError(Text.translatable("command.speedrun.alphabet.outdated_warning",
-                                        "/itemspeedrun start hannumspeed:" + len));
+                            }
+                            final Identifier goal = new Identifier("speedabc", letter);
+                            s.getSource().sendError(Text.translatable("command.speedrun.alphabet.outdated_warning",
+                                    "/itemspeedrun start speedabc:" + letter));
+                            return ItemSpeedrunCommandHandle.start(s.getSource(), goal, Collections.singleton(player));
+                        })
+                )
+        );
+        dispatcher.register(CommandManager.literal("hannumspeed")
+                .then(CommandManager.argument("length", IntegerArgumentType.integer(1, 10))
+                        //.requires(ItemSpeedrunEvents::isOp)
+                        .executes(s -> {
+                            final ServerPlayerEntity player = s.getSource().getPlayer();
+                            if (player == null) {
+                                s.getSource().sendError(Text.translatable("command.speedrun.alphabet.players_empty"));
                                 return 0;
-                            })
-                    )
-            );
-        }
+                            }
+                            final String sLen = Integer.toString(IntegerArgumentType.getInteger(s, "length"));
+                            final Identifier goal = new Identifier("hannumspeed", sLen);
+                            s.getSource().sendError(Text.translatable("command.speedrun.alphabet.outdated_warning",
+                                    "/itemspeedrun start hannumspeed:" + sLen));
+                            return ItemSpeedrunCommandHandle.start(s.getSource(), goal, Collections.singleton(player));
+                        })
+                )
+        );
     }
 
     private static Command<ServerCommandSource> startCmd(Collection<? extends ServerPlayerEntity> players, ItemSpeedrunDifficulty difficulty) {

@@ -34,12 +34,11 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public class AlphabetSpeedrunConfigData {
-    final static int CURRENT_SCHEMA = 10;
+    final static int CURRENT_SCHEMA = 3;
     private boolean itemsOnlyAvailableWhenRunning = false;
     private boolean stopOnQuit = false;
     private boolean timerPausesWhenVacant = true;
     private int defaultInvitationCooldown = 30;
-    private boolean enableLegacyCommands = false;
 
     // default: !empty
     private ItemRunDifficultyRuleFactory difficultiesWithOp = new ItemRunDifficultyRuleFactory.Impl(
@@ -382,14 +381,6 @@ public class AlphabetSpeedrunConfigData {
         this.defaultInvitationCooldown = defaultInvitationCooldown;
     }
 
-    public boolean isEnableLegacyCommands() {
-        return enableLegacyCommands;
-    }
-
-    public void setEnableLegacyCommands(boolean enableLegacyCommands) {
-        this.enableLegacyCommands = enableLegacyCommands;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -406,7 +397,6 @@ public class AlphabetSpeedrunConfigData {
                 .append(difficultiesWithOp, that.difficultiesWithOp)
                 .append(permissions, that.permissions)
                 .append(difficultDifficulties, that.difficultDifficulties)
-                .append(enableLegacyCommands, that.enableLegacyCommands)
                 .isEquals();
     }
 
@@ -420,7 +410,6 @@ public class AlphabetSpeedrunConfigData {
                 .append(difficultiesWithOp)
                 .append(permissions)
                 .append(difficultDifficulties)
-                .append(enableLegacyCommands)
                 .toHashCode();
     }
 
@@ -461,11 +450,6 @@ public class AlphabetSpeedrunConfigData {
                 Default time limit (seconds) for inviting other players to one's run, if not
                 specified in the draft.""");
         writer.name("default-invitation-cooldown").value(getDefaultInvitationCooldown());
-
-        writer.comment("""
-                If this is on, legacy commands (/speedabc and /hannumspeed) will be enabled.
-                Default to false.""");
-        writer.name("enable-legacy-commands").value(isEnableLegacyCommands());
 
         final var ruleFactory = getDifficultiesWithOp();
         writer.comment("""
@@ -509,7 +493,6 @@ public class AlphabetSpeedrunConfigData {
                 case "stop-on-quit" -> setStopOnQuit(reader.nextBoolean());
                 case "timer-pauses-when-vacant" -> setTimerPausesWhenVacant(reader.nextBoolean());
                 case "default-invitation-cooldown" -> setDefaultInvitationCooldown(reader.nextInt());
-                case "enable-legacy-commands" -> setEnableLegacyCommands(reader.nextBoolean());
                 case "difficulties-with-op.inverted" -> difficultyFactoryInverted = reader.nextBoolean();
                 case "difficulties-with-op" -> factoryFactory = switch (reader.peek()) {
                     case STRING -> {

@@ -44,12 +44,10 @@
   "item_predicate.speedrun.alphabet.extra_req.items": "需要: %s",
   "item_predicate.speedrun.alphabet.extra_req.items.any": "任一物品",
 
-  "dataPack.speedrun.alphabet.ext.bundle": "速通字母表: 收纳袋增强包",
+  "dataPack.speedrun.alphabet.ext.bundle": "速通字母表: 1.19.3 收纳袋增强包",
   "dataPack.speedrun.alphabet.ext.120": "速通字母表: 1.20 预览增强包",
-  "dataPack.speedrun.alphabet.ext.120.release": "速通字母表: 1.20 功能包",
   "dataPack.speedrun.alphabet.ext.bundle.req": "需要启用原版收纳袋扩展包",
   "dataPack.speedrun.alphabet.ext.120.req": "需要启用原版 1.20 预览包",
-  "dataPack.speedrun.alphabet.ext.120.reqmod": "需要 1.20 版本的 \u03b1\u03b2speedrun 模组",
   "dataPack.speedrun.alphabet.example": "示例扩展包",
   "dataPack.speedrun.alphabet.example.desc": "本扩展包将帮助你撰写自己的扩展包",
 

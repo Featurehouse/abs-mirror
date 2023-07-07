@@ -2,7 +2,7 @@ import java.nio.file.Files
 
 plugins {
     id "architectury-plugin" version "3.4-SNAPSHOT"
-    id "dev.architectury.loom" version "1.1-SNAPSHOT" apply false
+    id "dev.architectury.loom" version "1.0-SNAPSHOT" apply false
     id 'org.cadixdev.licenser' version '0.6.1' apply false
 }
 
@@ -99,14 +99,7 @@ allprojects {
     }
 }
 
-tasks.register('zipAbsBundle', Zip) {
-    from ('extension-packs/abs-bundle')
-    destinationDirectory.set new File(buildDir, 'libs')
-    archiveClassifier.set 'abs-bundle'
-}
-
-//<editor-fold desc="Legacy release packs" defaultstate="collapsed">
-tasks.register('legacyPublicReleaseCopyrightZip', Zip) {
+tasks.register('publicReleaseCopyrightZip', Zip) {
     // Legal and Sources
     from (files('LICENSE.txt', 'NOTICE.txt')) {
         into 'legal'
@@ -140,30 +133,18 @@ tasks.register('legacyPublicReleaseCopyrightZip', Zip) {
     archiveClassifier.set 'public'
 }
 
-//tasks.register('zipAbsUpdate120', Zip) {
-//    from ('extension-packs/abs-update-120')
-//    destinationDirectory.set new File(buildDir, 'libs')
-//    archiveClassifier.set 'abs-update-120'
-//}
-
-tasks.register('legacyPublicReleasePack', Copy) {
+tasks.register('publicReleasePack', Copy) {
     dependsOn 'publicReleaseCopyrightZip'
     ['fabric', 'forge'].each { p ->
         from ("$p/build/deploy/alphabet-speedrun-$p-${project.version}.jar")
     }
     from publicReleaseCopyrightZip
-    from (zipAbsBundle) {
-        rename { "abs-bundle-${project.version}-datapack.zip" }
-    }
-//    from (zipAbsUpdate120) {
-//        rename { "abs-update-120-${project.version}-datapack.zip" }
-//    }
     def dest = new File(buildDir, 'publicRelease')
     doFirst { dest.mkdir() }
     into dest
 }
 
-tasks.register('legacyCustomerPack', Zip) {
+tasks.register('customerPack', Zip) {
     //def extraDir = file('x-deploy')
     from ('x-deploy') {
         into ''
@@ -198,4 +179,3 @@ tasks.register('legacyCustomerPack', Zip) {
     archiveClassifier.set 'all'
 
 }
-//</editor-fold>
