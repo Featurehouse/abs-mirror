@@ -21,9 +21,12 @@ def isDemoBuild = rootProject.isDemoVersion || MHEUtil.run(String.valueOf(absCus
     it == null || it.isBlank() || it in ['???', 'null']
 }
 if (isDemoBuild)
-    logger.warn("[ABS] ${project.displayName} is a demo build")
-else
+    logger.lifecycle("[ABS] ${project.displayName} is a normal build")
+else {
     logger.lifecycle("[ABS] ${project.displayName} Platform=$mcPlatform Customer=$absCustomerId PubKeyIn=$absPubKey")
+    logger.warn("ABS mod signing and obfuscation is currently deprecated.\n" +
+            "Use at your own risk.")
+}
 
 loom {
     accessWidenerPath = project(':common').loom.accessWidenerPath
@@ -222,8 +225,8 @@ tasks.register('postInjectSourcesJar', MapJar) {
     }
 }
 
-if (!isDemoBuild) {
-	prepareRemapJar.mustRunAfter postObfProcess
+{//if (!isDemoBuild) {
+	//prepareRemapJar.mustRunAfter postObfProcess
 	//prepareRemapSourcesJar.mustRunAfter proguardJar
     build.dependsOn postInjectJar, postInjectSourcesJar, remapApiJar
     remapApiJar.mustRunAfter remapJar

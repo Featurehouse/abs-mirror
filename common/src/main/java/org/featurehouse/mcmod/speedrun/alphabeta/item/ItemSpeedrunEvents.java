@@ -128,7 +128,7 @@ public class ItemSpeedrunEvents {
 
         // Register ItemOnlyAvailableWhenRunning events
         TickEvent.PLAYER_POST.register(player -> {
-            if (player.world.isClient()) return;
+            if (player.getWorld().isClient()) return;
             if (AlphabetSpeedrunConfigData.getInstance().isItemsOnlyAvailableWhenRunning()) {
                 boolean dirty = false;
                 final ServerPlayerEntity serverPlayer = (ServerPlayerEntity) player;
@@ -220,17 +220,17 @@ public class ItemSpeedrunEvents {
         } catch (ClassNotFoundException e) {
             if (Platform.getEnvironment() == Env.SERVER) {
                 throw new UnsupportedOperationException("ABS Demo Mod doesn't support dedicated server.\n" +
-                        "Purchase for the full version by mailing to featurehouse@outlook.com");
+                        "Get the full version by mailing to featurehouse@outlook.com");
             }
             for (String modId : Arrays.asList("minihud", "xaeros-minimap", "xaerosminimap")) {
                 if (Platform.isModLoaded(modId)) {
                     throw new UnsupportedOperationException("ABS Demo Mod is not compatible with various mods.\n" +
-                            "Purchase for the full version by mailing to featurehouse@outlook.com");
+                            "Get the full version by mailing to featurehouse@outlook.com");
                 }
             }
 
-            ClientGuiEvent.RENDER_HUD.register((matrices, tickDelta) ->
-                    MinecraftClient.getInstance().textRenderer.draw(matrices, Text.translatable("demo.speedrun.alphabet"), 10, 10, 0xfffff));
+            ClientGuiEvent.RENDER_HUD.register((drawContext, tickDelta) ->
+                    drawContext.drawText(MinecraftClient.getInstance().textRenderer, Text.translatable("demo.speedrun.alphabet"), 10, 10, 0xfffff, true));
             TickEvent.SERVER_POST.register(server -> {
                 var t = server.getOverworld().getTime();
                 if (t >= 5400) {

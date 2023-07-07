@@ -44,10 +44,12 @@
   "item_predicate.speedrun.alphabet.extra_req.items": "Requires: %s",
   "item_predicate.speedrun.alphabet.extra_req.items.any": "Anything",
 
-  "dataPack.speedrun.alphabet.ext.bundle": "αβspeedrun: Add 1.19.3 Bundle Support",
-  "dataPack.speedrun.alphabet.ext.120": "αβspeedrun: Add 1.20 Exp. Support",
+  "dataPack.speedrun.alphabet.ext.bundle": "\u03b1\u03b2speedrun: Add Bundle Support",
+  "dataPack.speedrun.alphabet.ext.120": "\u03b1\u03b2speedrun: Add 1.20 Exp. Support",
+  "dataPack.speedrun.alphabet.ext.120.release": "\u03b1\u03b2speedrun: Add 1.20 Support",
   "dataPack.speedrun.alphabet.ext.bundle.req": "Requires turning on vanilla bundle data pack",
   "dataPack.speedrun.alphabet.ext.120.req": "Requires turning on vanilla 1.20 data pack",
+  "dataPack.speedrun.alphabet.ext.120.reqmod": "Requires \u03b1\u03b2speedrun mod for 1.20",
   "dataPack.speedrun.alphabet.example": "Example Extension Pack",
   "dataPack.speedrun.alphabet.example.desc": "This pack leads you to create your own pack",
 

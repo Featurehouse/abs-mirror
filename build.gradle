@@ -99,7 +99,14 @@ allprojects {
     }
 }
 
-tasks.register('publicReleaseCopyrightZip', Zip) {
+tasks.register('zipAbsBundle', Zip) {
+    from ('extension-packs/abs-bundle')
+    destinationDirectory.set new File(buildDir, 'libs')
+    archiveClassifier.set 'abs-bundle'
+}
+
+//<editor-fold desc="Legacy release packs" defaultstate="collapsed">
+tasks.register('legacyPublicReleaseCopyrightZip', Zip) {
     // Legal and Sources
     from (files('LICENSE.txt', 'NOTICE.txt')) {
         into 'legal'
@@ -133,19 +140,13 @@ tasks.register('publicReleaseCopyrightZip', Zip) {
     archiveClassifier.set 'public'
 }
 
-tasks.register('zipAbsBundle', Zip) {
-    from ('extension-packs/abs-bundle')
-    destinationDirectory.set new File(buildDir, 'libs')
-    archiveClassifier.set 'abs-bundle'
-}
+//tasks.register('zipAbsUpdate120', Zip) {
+//    from ('extension-packs/abs-update-120')
+//    destinationDirectory.set new File(buildDir, 'libs')
+//    archiveClassifier.set 'abs-update-120'
+//}
 
-tasks.register('zipAbsUpdate120', Zip) {
-    from ('extension-packs/abs-update-120')
-    destinationDirectory.set new File(buildDir, 'libs')
-    archiveClassifier.set 'abs-update-120'
-}
-
-tasks.register('publicReleasePack', Copy) {
+tasks.register('legacyPublicReleasePack', Copy) {
     dependsOn 'publicReleaseCopyrightZip'
     ['fabric', 'forge'].each { p ->
         from ("$p/build/deploy/alphabet-speedrun-$p-${project.version}.jar")
@@ -154,15 +155,15 @@ tasks.register('publicReleasePack', Copy) {
     from (zipAbsBundle) {
         rename { "abs-bundle-${project.version}-datapack.zip" }
     }
-    from (zipAbsUpdate120) {
-        rename { "abs-update-120-${project.version}-datapack.zip" }
-    }
+//    from (zipAbsUpdate120) {
+//        rename { "abs-update-120-${project.version}-datapack.zip" }
+//    }
     def dest = new File(buildDir, 'publicRelease')
     doFirst { dest.mkdir() }
     into dest
 }
 
-tasks.register('customerPack', Zip) {
+tasks.register('legacyCustomerPack', Zip) {
     //def extraDir = file('x-deploy')
     from ('x-deploy') {
         into ''
@@ -197,3 +198,4 @@ tasks.register('customerPack', Zip) {
     archiveClassifier.set 'all'
 
 }
+//</editor-fold>

@@ -11,7 +11,8 @@
     "Pigeonia Featurehouse"
   ],
   "contact": {
-    "email": "featurehouse@outlook.com"
+    "email": "featurehouse@outlook.com",
+    "homepage": "https://www.curseforge.com/minecraft/mc-mods/alphabet_speedrun"
   },
   "icon": "assets/alphabet_speedrun/icon_fabric.png",
   "license": "${modlicense}",
@@ -28,6 +29,7 @@
     "alphabet-speedrun.common.mixins.json"
   ],
   "suggests": {
+    "end-poem-extension": ">=2.2",
     "quilt_loader": "*"
   },
   "provides": [
@@ -36,7 +38,7 @@
   ],
   "depends": {
     "fabric-api": "*",
-    "minecraft": ">=1.19.4",
-    "architectury": ">=8"
+    "minecraft": ">=1.20-",
+    "architectury": ">=9"
   }
 }
