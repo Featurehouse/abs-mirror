@@ -9,11 +9,11 @@ plugins {
 
 architectury {
     platformSetupLoomIde()
-    forge()
+    neoForge()
 }
 
 ext {
-    mcPlatform = MCPlatform.FORGE
+    mcPlatform = MCPlatform.NEOFORGE
     absCustomerId = MHEUtil.orElse(System.getenv('ABS_CUSTOMER_ID')) { MHEUtil.extOrElse(rootProject.ext, 'abs.customer_id', '???') }
     absPubKey = MHEUtil.orElse(System.getenv('ABS_PUB_KEY')) { MHEUtil.extOrElse(rootProject.ext, 'abs.encrypt_public_key', '/dev/null') }
     proguardRepackagePackageSuffix = 'v303m'
@@ -33,7 +33,7 @@ else {
 loom {
     accessWidenerPath = project(':common').loom.accessWidenerPath
     
-    forge {
+    neoForge {
         convertAccessWideners.set(true)
         extraAccessWideners.add(loom.accessWidenerPath.get().asFile.name)
 
@@ -52,11 +52,11 @@ configurations {
 }
 
 dependencies {
-    forge "net.minecraftforge:forge:${rootProject.forge_version}"
-    modApi "dev.architectury:architectury-forge:${rootProject.architectury_version}"
+    neoForge "net.neoforged:neoforge:${rootProject.forge_version}"
+    modApi "dev.architectury:architectury-neoforge:${rootProject.architectury_version}"
     
     common(project(path: ':common', configuration: 'namedElements')) { transitive = false }
-    shadowCommon(project(path: ':common', configuration: 'transformProductionForge')) { transitive = false }
+    shadowCommon(project(path: ':common', configuration: 'transformProductionNeoForge')) { transitive = false }
 }
 
 def absRootDir = new File(buildDir, 'alphabetSpeedrun')

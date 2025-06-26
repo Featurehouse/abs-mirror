@@ -11,11 +11,12 @@
     "Pigeonia Featurehouse"
   ],
   "contact": {
+    "issues": "https://github.com/Featurehouse/abs-mirror/issues",
     "email": "featurehouse@outlook.com",
-    "homepage": "https://www.curseforge.com/minecraft/mc-mods/alphabet_speedrun"
+    "homepage": "https://modrinth.com/mod/alphabet_speedrun"
   },
   "icon": "assets/alphabet_speedrun/icon_fabric.png",
-  "license": "${modlicense}",
+  "license": "AGPL-3.0-or-later",
   "environment": "*",
   "entrypoints": {
     "main": [
@@ -38,7 +39,7 @@
   ],
   "depends": {
     "fabric-api": "*",
-    "minecraft": ">=1.20-",
-    "architectury": ">=9"
+    "minecraft": ">=1.21.6-",
+    "architectury": ">=17"
   }
 }
