@@ -171,7 +171,6 @@ B,bubble_coral,4,气泡珊瑚
 B,bubble_coral_block,5,气泡珊瑚块
 B,bubble_coral_fan,5,气泡珊瑚扇
 B,bucket,2,铁桶
-B,budding_amethyst,5,紫水晶母岩
 B,bundle,3,收纳袋
 B,burn_pottery_sherd,6,烈焰纹样陶片
 B,bush,3,灌木丛
@@ -360,7 +359,6 @@ D,dead_horn_coral_fan,8,失活的鹿角珊瑚扇
 D,dead_tube_coral,6,失活的管珊瑚
 D,dead_tube_coral_block,7,失活的管珊瑚块
 D,dead_tube_coral_fan,7,失活的管珊瑚扇
-D,debug_stick,3,调试棒
 D,decorated_pot,4,饰纹陶罐
 D,deepslate,3,深板岩
 D,deepslate_brick_slab,6,深板岩砖台阶
@@ -398,7 +396,6 @@ D,diorite_slab,5,闪长岩台阶
 D,diorite_stairs,5,闪长岩楼梯
 D,diorite_wall,4,闪长岩墙
 D,dirt,2,泥土
-D,dirt_path,2,土径
 D,disc_fragment_5,4,唱片残片
 D,dispenser,3,发射器
 D,dragon_breath,2,龙息
@@ -420,7 +417,6 @@ E,enchanted_book,3,附魔书
 E,enchanted_golden_apple,5,附魔金苹果
 E,enchanting_table,3,附魔台
 E,end_crystal,4,末地水晶
-E,end_portal_frame,7,末地传送门框架
 E,end_rod,3,末地烛
 E,end_stone,3,末地石
 E,end_stone_brick_slab,6,末地石砖台阶
@@ -442,7 +438,6 @@ E,exposed_cut_copper,7,斑驳的切制铜块
 E,exposed_cut_copper_slab,8,斑驳的切制铜台阶
 E,exposed_cut_copper_stairs,8,斑驳的切制铜楼梯
 E,eye_armor_trim_smithing_template,4,锻造模板
-F,farmland,2,耕地
 F,feather,2,羽毛
 F,fermented_spider_eye,4,发酵蛛眼
 F,fern,1,蕨
@@ -559,13 +554,6 @@ H,horn_coral_fan,5,鹿角珊瑚扇
 H,host_armor_trim_smithing_template,4,锻造模板
 H,howl_pottery_sherd,6,狼嚎纹样陶片
 I,ice,1,冰
-I,infested_chiseled_stone_bricks,6,虫蚀雕纹石砖
-I,infested_cobblestone,4,虫蚀圆石
-I,infested_cracked_stone_bricks,6,虫蚀裂纹石砖
-I,infested_deepslate,5,虫蚀深板岩
-I,infested_mossy_stone_bricks,5,虫蚀苔石砖
-I,infested_stone,4,虫蚀石头
-I,infested_stone_bricks,4,虫蚀石砖
 I,ink_sac,2,墨囊
 I,iron_axe,2,铁斧
 I,iron_bars,3,铁栏杆
@@ -606,7 +594,6 @@ J,jungle_stairs,5,丛林木楼梯
 J,jungle_trapdoor,6,丛林木活板门
 J,jungle_wood,3,丛林木
 K,kelp,2,海带
-K,knowledge_book,4,知识之书
 L,ladder,2,梯子
 L,lantern,2,灯笼
 L,lapis_block,4,青金石块
@@ -625,7 +612,6 @@ L,leather_horse_armor,4,皮革马铠
 L,leather_leggings,4,皮革裤子
 L,lectern,2,讲台
 L,lever,2,拉杆
-L,light,4,光源方块
 L,light_blue_banner,5,淡蓝色旗帜
 L,light_blue_bed,4,淡蓝色床
 L,light_blue_bundle,6,淡蓝色收纳袋
@@ -892,7 +878,6 @@ P,pink_wool,5,粉红色羊毛
 P,piston,2,活塞
 P,pitcher_plant,3,瓶子草
 P,pitcher_pod,5,瓶子草荚果
-P,player_head,4,玩家的头
 P,plenty_pottery_sherd,6,富饶纹样陶片
 P,podzol,3,灰化土
 P,pointed_dripstone,4,滴水石锥
@@ -1172,8 +1157,6 @@ T,tall_dry_grass,4,高枯草丛
 T,tall_grass,3,高草丛
 T,target,2,标靶
 T,terracotta,2,陶瓦
-T,test_block,4,测试方块
-T,test_instance_block,6,测试实例方块
 T,tide_armor_trim_smithing_template,4,锻造模板
 T,tinted_glass,4,遮光玻璃
 T,tipped_arrow,2,药箭
