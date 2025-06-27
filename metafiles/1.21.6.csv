@@ -58,7 +58,6 @@ B,bamboo_slab,3,竹台阶
 B,bamboo_stairs,3,竹楼梯
 B,bamboo_trapdoor,4,竹活板门
 B,barrel,2,木桶
-B,barrier,2,屏障
 B,basalt,3,玄武岩
 B,beacon,2,信标
 B,bee_nest,2,蜂巢
@@ -227,7 +226,6 @@ C,chiseled_tuff,5,雕纹凝灰岩
 C,chiseled_tuff_bricks,6,雕纹凝灰岩砖
 C,chorus_flower,3,紫颂花
 C,chorus_fruit,3,紫颂果
-C,chorus_plant,4,紫颂植株
 C,clay,2,黏土
 C,clay_ball,3,黏土球
 C,clock,2,时钟
@@ -574,7 +572,6 @@ I,iron_sword,2,铁剑
 I,iron_trapdoor,4,铁活板门
 I,item_frame,5,物品展示框
 J,jack_o_lantern,3,南瓜灯
-J,jigsaw,4,拼图方块
 J,jukebox,3,唱片机
 J,jungle_boat,4,丛林木船
 J,jungle_button,5,丛林木按钮
@@ -1077,7 +1074,6 @@ S,soul_lantern,4,灵魂灯笼
 S,soul_sand,3,灵魂沙
 S,soul_soil,3,灵魂土
 S,soul_torch,4,灵魂火把
-S,spawner,3,刷怪笼
 S,spectral_arrow,3,光灵箭
 S,spider_eye,3,蜘蛛眼
 S,spire_armor_trim_smithing_template,4,锻造模板
@@ -1143,8 +1139,6 @@ S,stripped_spruce_log,6,去皮云杉原木
 S,stripped_spruce_wood,5,去皮云杉木
 S,stripped_warped_hyphae,6,去皮诡异菌核
 S,stripped_warped_stem,6,去皮诡异菌柄
-S,structure_block,4,结构方块
-S,structure_void,4,结构空位
 S,sugar,1,糖
 S,sugar_cane,2,甘蔗
 S,sunflower,3,向日葵
@@ -1168,7 +1162,6 @@ T,torchflower_seeds,5,火把花种子
 T,totem_of_undying,4,不死图腾
 T,trapped_chest,3,陷阱箱
 T,trial_key,4,试炼钥匙
-T,trial_spawner,5,试炼刷怪笼
 T,trident,3,三叉戟
 T,tripwire_hook,3,绊线钩
 T,tropical_fish,3,热带鱼
@@ -1188,7 +1181,6 @@ T,turtle_egg,3,海龟蛋
 T,turtle_helmet,3,海龟壳
 T,turtle_scute,4,海龟鳞甲
 T,twisting_vines,3,缠怨藤
-V,vault,2,宝库
 V,verdant_froglight,5,青翠蛙明灯
 V,vex_armor_trim_smithing_template,4,锻造模板
 V,vine,2,藤蔓
