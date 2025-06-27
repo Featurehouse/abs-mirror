@@ -17,11 +17,18 @@
     "minecraft:lime_stained_glass_pane",
     "minecraft:magenta_concrete_powder",
     "minecraft:magenta_stained_glass_pane",
+    "minecraft:oak_hanging_sign",
     "minecraft:oxidized_cut_copper_slab",
     "minecraft:oxidized_cut_copper_stairs",
     "minecraft:pink_concrete_powder",
     "minecraft:pink_stained_glass_pane",
     "minecraft:stripped_dark_oak_log",
+    "minecraft:stripped_pale_oak_log",
+    "minecraft:waxed_cut_copper_slab",
+    "minecraft:waxed_cut_copper_stairs",
+    "minecraft:waxed_exposed_copper_grate",
+    "minecraft:waxed_oxidized_copper_grate",
+    "minecraft:waxed_weathered_copper_grate",
     "minecraft:weathered_cut_copper_slab",
     "minecraft:weathered_cut_copper_stairs"
   ]

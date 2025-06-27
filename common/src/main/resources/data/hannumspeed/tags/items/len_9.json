@@ -1,8 +1,21 @@
 {
   "replace": false,
   "values": [
+    "minecraft:birch_hanging_sign",
+    "minecraft:cherry_hanging_sign",
+    "minecraft:crimson_hanging_sign",
+    "minecraft:jungle_hanging_sign",
+    "minecraft:mangrove_hanging_sign",
+    "minecraft:spruce_hanging_sign",
+    "minecraft:warped_hanging_sign",
+    "minecraft:waxed_exposed_chiseled_copper",
+    "minecraft:waxed_exposed_copper_trapdoor",
     "minecraft:waxed_exposed_cut_copper",
+    "minecraft:waxed_oxidized_chiseled_copper",
+    "minecraft:waxed_oxidized_copper_trapdoor",
     "minecraft:waxed_oxidized_cut_copper",
+    "minecraft:waxed_weathered_chiseled_copper",
+    "minecraft:waxed_weathered_copper_trapdoor",
     "minecraft:waxed_weathered_cut_copper"
   ]
 }

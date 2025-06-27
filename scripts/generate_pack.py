@@ -196,20 +196,20 @@ def main():
     subparsers = parser.add_subparsers(dest='command', required=True)
 
     # generate-csv 命令
-    parser_csv = subparsers.add_parser('generate-csv', help='生成中间CSV文件')
+    parser_csv = subparsers.add_parser('csv', help='生成中间CSV文件')
     parser_csv.add_argument('--version', required=True, help='Minecraft版本号，如1.21.6')
     parser_csv.add_argument('--output-csv', required=True, help='输出的CSV文件路径')
 
     # generate-datapack 命令
-    parser_datapack = subparsers.add_parser('generate-datapack', help='生成最终数据包')
+    parser_datapack = subparsers.add_parser('datapack', help='生成最终数据包')
     parser_datapack.add_argument('--input-csv', required=True, help='输入的CSV文件路径')
     parser_datapack.add_argument('--output-dir', required=True, help='数据包输出目录')
 
     args = parser.parse_args()
 
-    if args.command == 'generate-csv':
+    if args.command == 'csv':
         generate_csv(args.version, args.output_csv)
-    elif args.command == 'generate-datapack':
+    elif args.command == 'datapack':
         generate_datapack(args.input_csv, args.output_dir)
 
 if __name__ == '__main__':

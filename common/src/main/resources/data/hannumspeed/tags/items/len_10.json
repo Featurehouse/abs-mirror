@@ -1,6 +1,9 @@
 {
   "replace": false,
   "values": [
+    "minecraft:acacia_hanging_sign",
+    "minecraft:dark_oak_hanging_sign",
+    "minecraft:pale_oak_hanging_sign",
     "minecraft:waxed_exposed_cut_copper_slab",
     "minecraft:waxed_exposed_cut_copper_stairs",
     "minecraft:waxed_oxidized_cut_copper_slab",
