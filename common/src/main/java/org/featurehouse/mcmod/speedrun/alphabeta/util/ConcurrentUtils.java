@@ -20,19 +20,17 @@ package org.featurehouse.mcmod.speedrun.alphabeta.util;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 public class ConcurrentUtils {
-    private static final AtomicInteger TID = new AtomicInteger();
 
     public static void run(CompletableFuture<Void> completableFuture, Consumer<Exception> onFailure) {
-        new Thread(() -> {
+        Thread.ofVirtual().name("ABS-Concurrent-", 1).start(() -> {
             try {
                 completableFuture.get();
             } catch (InterruptedException | ExecutionException e) {
                 onFailure.accept(e);
             }
-        }, "ABS-Concurrent-" + TID.getAndIncrement()).start();
+        });
     }
 }

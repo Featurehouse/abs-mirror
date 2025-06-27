@@ -60,7 +60,7 @@ public enum DefaultItemSpeedrunDifficulty implements ItemSpeedrunDifficulty {
     DefaultItemSpeedrunDifficulty(String rawId, GivenItemState elytraState, GivenItemState fireworkState) {
         this.elytraState = elytraState;
         this.fireworkState = fireworkState;
-        id = new Identifier("speedabc", rawId);
+        id = Identifier.of("speedabc", rawId);
         translationKey = "speedrun.alphabet.item.difficulty.speedabc." + rawId;
     }
 

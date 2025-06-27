@@ -20,6 +20,7 @@ package org.featurehouse.mcmod.speedrun.alphabeta.item;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.command.DraftManager;
@@ -73,14 +74,14 @@ public class MultiplayerRecords {
 
         final UUID uuid = rec.recordId();
         final Invitation invitation = new Invitation(self.getUuid(), uuid,
-                RecordSnapshot.fromRecord(rec, self.server.getOverworld().getTime()).asText(),
+                RecordSnapshot.fromRecord(rec, serverOf(self).getOverworld().getTime()).asText(),
                 rec.isCoop() ? Invitation.COOP : Invitation.PVP);
         INVITATIONS.computeIfAbsent(uuid, u0 -> Sets.newHashSet())
                 .addAll(players.stream()
                         .map(ServerPlayerEntity::getUuid)
                         .map(InvitationCache::new)
                         .collect(Collectors.toSet()));
-        final Text text0 = invitation.toText(self.server.getPlayerManager());
+        final Text text0 = invitation.toText(serverOf(self).getPlayerManager());
         if (text0 == null) return 0;    // Never happens
 
         for (ServerPlayerEntity player : players) {
@@ -108,7 +109,7 @@ public class MultiplayerRecords {
             }
         }
 
-        CoopRecordAccess coopRecord = CoopRecordManager.fromServer(host.server).get(invitationCache);
+        CoopRecordAccess coopRecord = CoopRecordManager.fromServer(serverOf(host)).get(invitationCache);
         if (coopRecord == null) {
             invited.sendMessage(Text.translatable("command.speedrun.alphabet.invite.absent"));
             return;
@@ -122,7 +123,7 @@ public class MultiplayerRecords {
                 .ifPresentOrElse(c -> {
                     if (accept) {
                         //draft.getPlayers().add(invited.getUuid());
-                        RecordSnapshot record1 = RecordSnapshot.fromRecord(coopRecord, host.server.getOverworld().getTime());
+                        RecordSnapshot record1 = RecordSnapshot.fromRecord(coopRecord, serverOf(host).getOverworld().getTime());
                         invited.sendMessage(Text.translatable("command.speedrun.alphabet.start",
                                 record1.asText()));
                         ItemSpeedrunEvents.START_RUNNING_EVENT.invoker().onStartRunning(invited, coopRecord, ItemSpeedrunEvents.StartRunning.JOIN_COOP);
@@ -134,5 +135,9 @@ public class MultiplayerRecords {
                     }
                     invitationCaches.remove(c);
                 }, () -> invited.sendMessage(Text.translatable("command.speedrun.alphabet.invite.timeout")));
+    }
+
+    private static MinecraftServer serverOf(ServerPlayerEntity serverPlayer) {
+        return Objects.requireNonNull(serverPlayer.getServer());
     }
 }

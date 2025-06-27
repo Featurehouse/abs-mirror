@@ -41,14 +41,10 @@ public class ItemListViewMenu extends ScreenHandler {
     @VisibleForTesting //private
     final ItemListMenuSync sync;
     private int page;   // offset = page * 63
-    private final boolean isServer;
-
-    @Deprecated(forRemoval = true) boolean isServer() { return isServer; }
 
     public ItemListViewMenu(int syncId, List<ItemStack> iconList, boolean isRemote,
                             ItemListMenuSync sync, UUID uuid) {
         super(ItemSpeedrunEvents.MENU_TYPE_R.get(), syncId);
-        this.isServer = isRemote;
         this.uuid = uuid;
         this.sync = sync;
         this.addProperties(sync);
@@ -56,7 +52,7 @@ public class ItemListViewMenu extends ScreenHandler {
         fakeInv = new SimpleInventory(63);
         for (int i = 0; i < 63; i++)
             this.addSlot(new ReadOnlySlot(fakeInv, i, 8 + 18 * (i % 9), 19 + 18 * (i / 9)));
-        if (isServer) this.setSlots();
+        if (isRemote) this.setSlots();
         this.addProperty(new Property() {
             @Override
             public int get() {

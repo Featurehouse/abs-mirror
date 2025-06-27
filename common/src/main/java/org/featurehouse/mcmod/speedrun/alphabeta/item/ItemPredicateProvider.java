@@ -80,7 +80,7 @@ public sealed interface ItemPredicateProvider {
             }
 
             if (obj.has("advancement")) {
-                Identifier id = new Identifier(JsonHelper.getString(obj, "advancement"));
+                Identifier id = Identifier.of(JsonHelper.getString(obj, "advancement"));
                 return new Impl.OfAdvancement(id);
             }
 
@@ -103,7 +103,7 @@ public sealed interface ItemPredicateProvider {
                 return new Impl.CommonPredicate(ItemPredicate.fromJson(predicate), stack);
             } else if (JsonHelper.hasString(obj, "tag")) {
                 String tag = JsonHelper.getString(obj, "tag");
-                TagKey<Item> tagKey = TagKey.of(MultiverseHooks.itemKey(), new Identifier(tag));
+                TagKey<Item> tagKey = TagKey.of(MultiverseHooks.itemKey(), Identifier.of(tag));
                 @Nullable JsonObject predicate = JsonHelper.getObject(obj, "item_predicate", null);
                 if (JsonHelper.getBoolean(obj, "all", true)) {
                     if (predicate == null) return new Impl.EverythingInTag(tagKey);
@@ -131,7 +131,7 @@ public sealed interface ItemPredicateProvider {
     private static ItemPredicateProvider fromSingleString(JsonElement element) {
         String s = element.getAsString();
         if (s.startsWith("#")) {
-            TagKey<Item> tagKey = TagKey.of(MultiverseHooks.itemKey(), new Identifier(s.substring(1)));
+            TagKey<Item> tagKey = TagKey.of(MultiverseHooks.itemKey(), Identifier.of(s.substring(1)));
             return new Impl.EverythingInTag(tagKey);
         } else {
             Item item = JsonHelper.asItem(element, "element");
@@ -368,7 +368,7 @@ public sealed interface ItemPredicateProvider {
                     MutableText text = Text.empty();
                     boolean b = false;
                     for (JsonElement e : items) {
-                        Identifier id = new Identifier(JsonHelper.asString(e, "item"));
+                        Identifier id = Identifier.of(JsonHelper.asString(e, "item"));
                         final Item item = MultiverseHooks.getOptionalItem(id).orElseThrow(() -> new JsonSyntaxException("Unknown item id '" + id + '\''));
                         if (b) text.append(", ");
                         b = true;
@@ -393,7 +393,7 @@ public sealed interface ItemPredicateProvider {
                 final JsonObject o = JsonHelper.asObject(e, "enchantment");
                 Enchantment enchantment = null;
                 if (o.has("enchantment")) {
-                    Identifier identifier = new Identifier(JsonHelper.getString(o, "enchantment"));
+                    Identifier identifier = Identifier.of(JsonHelper.getString(o, "enchantment"));
                     enchantment = MultiverseHooks.getOptionalEnchantment(identifier).orElseThrow(() -> new JsonSyntaxException("Unknown enchantment '" + identifier + '\''));
                 }
                 NumberRange.IntRange intRange = NumberRange.IntRange.fromJson(o.get("levels"));

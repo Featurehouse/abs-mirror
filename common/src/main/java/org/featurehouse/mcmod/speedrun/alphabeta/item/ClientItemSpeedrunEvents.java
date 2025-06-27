@@ -41,7 +41,7 @@ public class ClientItemSpeedrunEvents {
         KeyMappingRegistry.register(VIEW_CURRENT_KEY);
         ClientTickEvent.CLIENT_POST.register(client -> {
             if (VIEW_CURRENT_KEY.wasPressed()) {
-                NetworkManager.sendToServer(new Identifier("alphabet_speedrun", "item_list"),
+                NetworkManager.sendToServer(Identifier.of("alphabet_speedrun", "item_list"),
                         new PacketByteBuf(Unpooled.EMPTY_BUFFER));
             }
         });

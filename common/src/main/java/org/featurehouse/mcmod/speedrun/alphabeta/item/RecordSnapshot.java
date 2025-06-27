@@ -44,8 +44,8 @@ public record RecordSnapshot(long duration, int collected, int required, Identif
     }
 
     static RecordSnapshot fromPvpRecordJson(@NotNull JsonObject obj, long currentTime) throws JsonSyntaxException {
-        Identifier goalId = new Identifier(JsonHelper.getString(obj, "goal_id"));
-        Identifier difficulty = new Identifier(JsonHelper.getString(obj, "difficulty"));
+        Identifier goalId = Identifier.of(JsonHelper.getString(obj, "goal_id"));
+        Identifier difficulty = Identifier.of(JsonHelper.getString(obj, "difficulty"));
         UUID recordId = UUID.fromString(JsonHelper.getString(obj, "record_id"));
         int required;
         if (JsonHelper.hasArray(obj, "displayed_stacks")) {

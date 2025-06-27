@@ -42,7 +42,7 @@ public abstract class ServerPlayerMixin extends PlayerEntity implements ItemColl
     @Nullable
     private JsonObject alphabetSpeedrun$itemRecordHistory;
 
-    @SuppressWarnings("all") ServerPlayerMixin() {super(null, null, 0, null);}
+    @SuppressWarnings("all") ServerPlayerMixin() {super(null, null);}
 
     @Accessor("server") @DontObfuscate public abstract MinecraftServer alphabetSpeedrun$getServer();
 

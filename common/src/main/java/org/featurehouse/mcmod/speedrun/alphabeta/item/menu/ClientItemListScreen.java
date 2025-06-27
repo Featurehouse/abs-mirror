@@ -20,6 +20,7 @@ package org.featurehouse.mcmod.speedrun.alphabeta.item.menu;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.entity.player.PlayerInventory;
@@ -30,7 +31,7 @@ import java.util.Objects;
 
 @Environment(EnvType.CLIENT)
 public class ClientItemListScreen extends HandledScreen<ItemListViewMenu> {
-    private static final Identifier TEXTURE_PTH = new Identifier("alphabet_speedrun", "textures/gui/view.png");
+    private static final Identifier TEXTURE_PTH = Identifier.of("alphabet_speedrun", "textures/gui/view.png");
 
     public ClientItemListScreen(ItemListViewMenu handler, PlayerInventory inventory, Text title) {
         super(handler, inventory, title);

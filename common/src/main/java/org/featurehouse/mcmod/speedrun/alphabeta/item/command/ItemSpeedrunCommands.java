@@ -466,7 +466,7 @@ public class ItemSpeedrunCommands {
                                     s.getSource().sendError(Text.translatable("command.speedrun.alphabet.players_empty"));
                                     return 0;
                                 }
-                                final Identifier goal = new Identifier("speedabc", letter);
+                                final Identifier goal = Identifier.of("speedabc", letter);
                                 s.getSource().sendError(Text.translatable("command.speedrun.alphabet.outdated_warning",
                                         "/itemspeedrun start speedabc:" + letter));
                                 return ItemSpeedrunCommandHandle.start(s.getSource(), goal, Collections.singleton(player));
@@ -483,7 +483,7 @@ public class ItemSpeedrunCommands {
                                     return 0;
                                 }
                                 final String sLen = Integer.toString(IntegerArgumentType.getInteger(s, "length"));
-                                final Identifier goal = new Identifier("hannumspeed", sLen);
+                                final Identifier goal = Identifier.of("hannumspeed", sLen);
                                 s.getSource().sendError(Text.translatable("command.speedrun.alphabet.outdated_warning",
                                         "/itemspeedrun start hannumspeed:" + sLen));
                                 return ItemSpeedrunCommandHandle.start(s.getSource(), goal, Collections.singleton(player));

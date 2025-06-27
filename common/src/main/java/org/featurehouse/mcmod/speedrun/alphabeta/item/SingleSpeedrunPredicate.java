@@ -47,7 +47,7 @@ public interface SingleSpeedrunPredicate {
                 yield new OfItemPredicate(itemPredicate, icon);
             }
             case "advancement" -> {
-                Identifier advancementId = new Identifier(JsonHelper.getString(obj, "advancement_id"));
+                Identifier advancementId = Identifier.of(JsonHelper.getString(obj, "advancement_id"));
                 yield new OfAdvancement(advancementId, icon);
             }
             default -> throw new JsonParseException("Expecting predicate_type as item / advancement, got" + obj.get("predicate_type"));

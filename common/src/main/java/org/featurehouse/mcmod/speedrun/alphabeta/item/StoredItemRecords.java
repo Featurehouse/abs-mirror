@@ -146,7 +146,7 @@ public class StoredItemRecords {
                 player.sendMessage(Text.translatable("command.speedrun.alphabet.list.header", player.getDisplayName()));
                 for (Path p : strings) {
                     JsonObject obj = GSON.fromJson(Files.newBufferedReader(p), JsonObject.class);
-                    RecordSnapshot record = RecordSnapshot.fromPvpRecordJson(obj, player.server.getOverworld().getTime());
+                    RecordSnapshot record = RecordSnapshot.fromPvpRecordJson(obj, player.getServer().getOverworld().getTime());
                     player.sendMessage(Text.literal(" * ").append(record.asText()));
                 }
                 player.sendMessage(Text.translatable("command.speedrun.alphabet.list.footer", strings.size()));
@@ -158,7 +158,7 @@ public class StoredItemRecords {
     }
 
     static Path rootPath(ServerPlayerEntity player) {
-        return player.server.getSavePath(WorldSavePath.ROOT);
+        return player.getServer().getSavePath(WorldSavePath.ROOT);
     }
     public static final Pattern FILENAME_PATTERN = Pattern.compile("^[0-9a-fA-F]{8}\\u002d[0-9a-fA-F]{4}\\u002d[0-9a-fA-F]{4}\\u002d[0-9a-fA-F]{4}\\u002d[0-9a-fA-F]{12}\\u002ejson$");
 }

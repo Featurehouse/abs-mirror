@@ -163,7 +163,7 @@ public final class ItemSpeedrunRecord implements ItemRecordAccess {
 
     public static ItemSpeedrunRecord fromJson(JsonElement element, boolean resetUuid) {
         JsonObject root = JsonHelper.asObject(element, "root");
-        Identifier goalId = new Identifier(JsonHelper.getString(root, "goal_id"));
+        Identifier goalId = Identifier.of(JsonHelper.getString(root, "goal_id"));
         UUID recordId = resetUuid ? UUID.randomUUID() : UUID.fromString(JsonHelper.getString(root, "record_id"));
         JsonArray arr;
 
@@ -205,7 +205,7 @@ public final class ItemSpeedrunRecord implements ItemRecordAccess {
             //obj.forEach(e -> mates.add(UUID.fromString(JsonHelper.asString(e, "uuid"))));
         }
 
-        ItemSpeedrunDifficulty difficulty1 = DefaultItemSpeedrunDifficulty.getDifficulty(new Identifier(JsonHelper.getString(root, "difficulty", "speedabc:empty")));
+        ItemSpeedrunDifficulty difficulty1 = DefaultItemSpeedrunDifficulty.getDifficulty(Identifier.of(JsonHelper.getString(root, "difficulty", "speedabc:empty")));
         return new ItemSpeedrunRecord(goalId, recordId, itemPredicates, collected,
                 startTime, finishTime, lastQuitTime, vacantTime, difficulty1, mates);
     }

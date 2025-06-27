@@ -520,15 +520,15 @@ public class AlphabetSpeedrunConfigData {
                             yield (inverted -> new ItemRunDifficultyRuleFactory.Impl(Collections.emptyList(), inverted));
                         BiFunction<Identifier, Boolean, ItemRunDifficultyRuleFactory> fun = (identifier, inverted) ->
                                 new ItemRunDifficultyRuleFactory.Impl(Collections.singletonList(identifier), inverted);
-                        if (s.startsWith("!")) yield (inverted) -> fun.apply(new Identifier(s.substring(1)), inverted);
-                        yield (inverted) -> fun.apply(new Identifier(s), inverted);
+                        if (s.startsWith("!")) yield (inverted) -> fun.apply(Identifier.of(s.substring(1)), inverted);
+                        yield (inverted) -> fun.apply(Identifier.of(s), inverted);
                     }
 
                     case BEGIN_ARRAY -> {
                         List<Identifier> idList = new ArrayList<>();
                         reader.beginArray();
                         while (reader.peek() != JsonToken.END_ARRAY) {
-                            Identifier id = new Identifier(reader.nextString());
+                            Identifier id = Identifier.of(reader.nextString());
                             idList.add(id);
                         }
                         reader.endArray();

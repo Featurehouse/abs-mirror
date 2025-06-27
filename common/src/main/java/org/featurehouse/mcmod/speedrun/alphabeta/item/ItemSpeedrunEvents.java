@@ -119,7 +119,7 @@ public class ItemSpeedrunEvents {
                 record.setLastQuitTime(-1);
             }
         });
-        NetworkManager.registerReceiver(NetworkManager.c2s(), new Identifier("alphabet_speedrun", "item_list"),
+        NetworkManager.registerReceiver(NetworkManager.c2s(), Identifier.of("alphabet_speedrun", "item_list"),
                 (buf, context) -> context.queue(() ->
                         ItemSpeedrunCommandHandle.viewCurrentRecord(
                                 text -> context.getPlayer().sendMessage(text.copy().formatted(Formatting.RED)),

@@ -83,7 +83,7 @@ public interface ItemRunDifficultyRuleFactory {
             List<Identifier> list = factory.asIdList();
             switch (list.size()) {
                 case 0 -> writer.value("NONE");
-                case 1 -> writer.value(list.get(0).toString());
+                case 1 -> writer.value(list.getFirst().toString());
                 default -> {
                     writer.beginArray();
                     for (Identifier id : list)

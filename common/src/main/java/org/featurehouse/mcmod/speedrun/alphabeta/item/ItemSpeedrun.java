@@ -75,7 +75,7 @@ public record ItemSpeedrun(
                 final JsonObject root = JsonHelper.asObject(json, id.toString());
                 ItemStack icon = iconFromJson(JsonHelper.getObject(root, "icon"));
                 Text display = Text.Serializer.fromJson(Objects.requireNonNull(root.get("display")));
-                //TagKey<Item> tagKey = TagKey.of(Registry.ITEM_KEY, new Identifier(JsonHelper.getString(root, "items")));
+                //TagKey<Item> tagKey = TagKey.of(Registry.ITEM_KEY, Identifier.of(JsonHelper.getString(root, "items")));
                 List<ItemPredicateProvider> providers = ItemPredicateProvider.fromJson(Objects.requireNonNull(root.get("items")));
                 m.put(id, new ItemSpeedrun(id, icon, display, providers));
             });

@@ -60,14 +60,14 @@ public class AlphabetSpeedrunMod {
             try (JsonReader reader = JsonReader.json5(CONFIG_PATH)) {
                 update |= configData.readFromJson5(reader);
             } catch (IOException e) {
-                LOGGER.error("Failed to read config from" + CONFIG_PATH, e);
+                LOGGER.error("Failed to read config from {}", CONFIG_PATH, e);
             }
         }
         if (update) {
             try (JsonWriter writer = JsonWriter.json5(CONFIG_PATH)) {
                 configData.writeToJson5(writer);
             } catch (IOException e) {
-                LOGGER.error("Failed to write config to " + CONFIG_PATH, e);
+                LOGGER.error("Failed to write config to {}", CONFIG_PATH, e);
             }
         }
     }

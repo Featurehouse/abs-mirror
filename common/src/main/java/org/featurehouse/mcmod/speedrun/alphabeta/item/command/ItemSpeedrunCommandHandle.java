@@ -53,17 +53,17 @@ public final class ItemSpeedrunCommandHandle {
             return 0;
         }
         ItemRecordAccess record0;
-        final long igt = player.server.getOverworld().getTime();
+        final long igt = serverOf(player).getOverworld().getTime();
         if ((record0 = player.alphabetSpeedrun$getItemRecordAccess()) != null) {
             errorConsumer.accept(Text.translatable("command.speedrun.alphabet.start.started",
                     player.getDisplayName(), RecordSnapshot.fromRecord(record0, igt).asText()));
             return 0;
         }
 
-        ItemSpeedrunRecord record = createSPRecord(speedrun, player.server, draft.getDifficulty());
+        ItemSpeedrunRecord record = createSPRecord(speedrun, serverOf(player), draft.getDifficulty());
         final List<UUID> players = draft.getPlayers();
 
-        final PlayerManager playerManager = player.server.getPlayerManager();
+        final PlayerManager playerManager = serverOf(player).getPlayerManager();
         if (draft.getPlayType() == PlayType.COOP) {
             CoopRecord coopRecord = new CoopRecord(record, /*operators=*/draft.getOperators(), /*players=*/players);
             coopRecord.getMates(playerManager, null).forEach(p -> {
@@ -108,7 +108,7 @@ public final class ItemSpeedrunCommandHandle {
             return 0;
         }
         for (ServerPlayerEntity player : players) {
-            final long time = player.server.getOverworld().getTime();
+            final long time = serverOf(player).getOverworld().getTime();
             ItemRecordAccess record;
             if ((record = player.alphabetSpeedrun$getItemRecordAccess()) != null) {
                 sender.sendError(Text.translatable("command.speedrun.alphabet.start.started",
@@ -164,7 +164,7 @@ public final class ItemSpeedrunCommandHandle {
         coopRecord.getPlayers().remove(player.getUuid());
         if (sendMsgToPlayer) {
             player.sendMessage(Text.translatable("command.speedrun.alphabet.quit",
-                    RecordSnapshot.fromRecord(coopRecord, player.server.getOverworld().getTime()).asText()));
+                    RecordSnapshot.fromRecord(coopRecord, serverOf(player).getOverworld().getTime()).asText()));
         }
         return 1;
     }
@@ -189,10 +189,10 @@ public final class ItemSpeedrunCommandHandle {
                         stop = true;
 
                     if (stop) {
-                        final Text text = RecordSnapshot.fromRecord(oldRecord, player.server.getOverworld().getTime()).asText();
+                        final Text text = RecordSnapshot.fromRecord(oldRecord, serverOf(player).getOverworld().getTime()).asText();
 
                         for (UUID coopPlayer : coop.getPlayers()) {
-                            final ServerPlayerEntity p0 = player.server.getPlayerManager().getPlayer(coopPlayer);
+                            final ServerPlayerEntity p0 = serverOf(player).getPlayerManager().getPlayer(coopPlayer);
                             if (p0 == null) continue;
                             p0.alphabetSpeedrun$setItemRecordAccess(null);
                             if (sendMsgToPlayer) {
@@ -224,7 +224,7 @@ public final class ItemSpeedrunCommandHandle {
         }
         for (ServerPlayerEntity player : players) {
             ItemRecordAccess record;
-            final long time = player.server.getOverworld().getTime();
+            final long time = serverOf(player).getOverworld().getTime();
             if ((record = player.alphabetSpeedrun$getItemRecordAccess()) != null) {
                 sender.sendError(Text.translatable("command.speedrun.alphabet.start.started",
                         player.getDisplayName(), RecordSnapshot.fromRecord(record, time).asText()));
@@ -289,5 +289,9 @@ public final class ItemSpeedrunCommandHandle {
         UUID recordId = UUID.randomUUID();
         return new ItemSpeedrunRecord(goal.id(), recordId, requirements0,
                 startTime, difficulty);
+    }
+    
+    private static MinecraftServer serverOf(ServerPlayerEntity serverPlayer) {
+        return Objects.requireNonNull(serverPlayer.getServer());
     }
 }

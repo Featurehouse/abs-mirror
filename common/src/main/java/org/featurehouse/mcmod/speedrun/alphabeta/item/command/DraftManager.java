@@ -67,7 +67,7 @@ public class DraftManager {
         ItemRecordAccess acc;
         if ((acc = serverPlayer.alphabetSpeedrun$getItemRecordAccess()) != null)
             return Optional.of(Text.translatable("command.speedrun.alphabet.draft.running",
-                    RecordSnapshot.fromRecord(acc, serverPlayer.server.getOverworld().getTime()).asText()));
+                    RecordSnapshot.fromRecord(acc, Objects.requireNonNull(serverPlayer.getServer()).getOverworld().getTime()).asText()));
         UUID uuid;
         if (drafts.containsKey(uuid = serverPlayer.getUuid()))
             return Optional.of(Text.translatable("command.speedrun.alphabet.draft.dup"));
@@ -87,7 +87,7 @@ public class DraftManager {
                 .collect(Collectors.toSet()));
         final Text info = draft.snapshot().asText();
         Invitation invitation = new Invitation(uuid, draft.getSessionId(), info, Invitation.DRAFT);
-        final Text text = invitation.toText(host.server.getPlayerManager());
+        final Text text = invitation.toText(Objects.requireNonNull(host.getServer()).getPlayerManager());
         if (text == null) return Optional.empty();
 
         for (ServerPlayerEntity player : players) {

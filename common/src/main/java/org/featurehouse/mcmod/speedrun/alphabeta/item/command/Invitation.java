@@ -40,13 +40,13 @@ public record Invitation(UUID host, UUID sessionIdCache, Text info, int type) {
                 Texts.bracketed(player.getDisplayName()),
                 this.info(),
                 Text.translatable("command.speedrun.alphabet.invite.accept")
-                        .styled(s -> s.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,
+                        .styled(s -> s.withClickEvent(new ClickEvent.RunCommand(
                                 String.format("/itemspeedrun invite respond %d %s %s",
                                         type() + ACCEPT,
                                         player.getGameProfile().getName(),
                                         sessionIdCache())))),
                 Text.translatable("command.speedrun.alphabet.invite.deny")
-                        .styled(s -> s.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,
+                        .styled(s -> s.withClickEvent(new ClickEvent.RunCommand(
                                 String.format("/itemspeedrun invite respond %d %s %s",
                                         type(),
                                         player.getGameProfile().getName(),
