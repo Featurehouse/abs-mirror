@@ -18,13 +18,13 @@
 
 package org.featurehouse.mcmod.speedrun.alphabeta.item.command;
 
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Util;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.RecordSnapshot;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.difficulty.DefaultItemSpeedrunDifficulty;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.difficulty.ItemSpeedrunDifficulty;
 
 import javax.annotation.CheckForNull;
+import net.minecraft.Util;
+import net.minecraft.resources.ResourceLocation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -33,7 +33,7 @@ import java.util.UUID;
 public class Draft {
     private final UUID sessionId = UUID.randomUUID();
     private PlayType playType = PlayType.PVP;
-    private Identifier goal;
+    private ResourceLocation goal;
     private final List<UUID> players = new ArrayList<>();
     private ItemSpeedrunDifficulty difficulty = DefaultItemSpeedrunDifficulty.UU;
     private final List<UUID> operators = new ArrayList<>();
@@ -48,11 +48,11 @@ public class Draft {
     }
 
     @CheckForNull
-    public Identifier getGoal() {
+    public ResourceLocation getGoal() {
         return goal;
     }
 
-    public void setGoal(Identifier goal) {
+    public void setGoal(ResourceLocation goal) {
         Objects.requireNonNull(goal, "goal");
         this.goal = goal;
     }
@@ -84,7 +84,7 @@ public class Draft {
 
     public Draft() {}
 
-    public static Draft createPVP(Identifier goal, ItemSpeedrunDifficulty difficulty) {
+    public static Draft createPVP(ResourceLocation goal, ItemSpeedrunDifficulty difficulty) {
         Draft draft = new Draft();
         //draft.setPlayType(PlayType.PVP);
         draft.setGoal(goal);

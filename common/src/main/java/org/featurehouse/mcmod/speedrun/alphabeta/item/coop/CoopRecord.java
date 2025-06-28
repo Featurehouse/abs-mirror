@@ -20,11 +20,6 @@ package org.featurehouse.mcmod.speedrun.alphabeta.item.coop;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.PlayerManager;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.JsonHelper;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.ItemSpeedrunRecord;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.SingleSpeedrunPredicate;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.difficulty.ItemSpeedrunDifficulty;
@@ -33,6 +28,11 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.PlayerList;
+import net.minecraft.util.GsonHelper;
+import net.minecraft.world.item.ItemStack;
 
 public class CoopRecord implements CoopRecordAccess {
     private final ItemSpeedrunRecord wrapped;
@@ -47,7 +47,7 @@ public class CoopRecord implements CoopRecordAccess {
 
 
     @Override
-    public Collection<ServerPlayerEntity> getMates(PlayerManager manager, ServerPlayerEntity self) {
+    public Collection<ServerPlayer> getMates(PlayerList manager, ServerPlayer self) {
         return players.parallelStream()
                 .map(manager::getPlayer)
                 .filter(p -> p != null && !p.equals(self))
@@ -55,8 +55,8 @@ public class CoopRecord implements CoopRecordAccess {
     }
 
     @Override
-    public void onStart(ServerPlayerEntity player) {
-        getPlayers().add(player.getUuid());
+    public void onStart(ServerPlayer player) {
+        getPlayers().add(player.getUUID());
         player.alphabetSpeedrun$setItemRecordAccess(this);
         difficulty().onStart(player);
         // TODO: multiplayer onStart: write in difficulty.onStart
@@ -74,7 +74,7 @@ public class CoopRecord implements CoopRecordAccess {
     }
 
     @Override
-    public Identifier goalId() {
+    public ResourceLocation goalId() {
         return wrapped.goalId();
     }
 
@@ -175,9 +175,9 @@ public class CoopRecord implements CoopRecordAccess {
     }
 
     public static @Nullable CoopRecordAccess tryParseMeta(CoopRecordManager manager, JsonObject obj) {
-        if (!JsonHelper.getBoolean(obj, "is_coop", false))
+        if (!GsonHelper.getAsBoolean(obj, "is_coop", false))
             return null;
-        UUID uuid = UUID.fromString(JsonHelper.getString(obj, "coop_uuid"));
+        UUID uuid = UUID.fromString(GsonHelper.getAsString(obj, "coop_uuid"));
         return manager.get(uuid);
     }
 
@@ -204,22 +204,22 @@ public class CoopRecord implements CoopRecordAccess {
     public static CoopRecord fromJson(@NotNull JsonObject obj) {
         Objects.requireNonNull(obj);
         final Set<UUID> operators = new HashSet<>();
-        JsonHelper.getArray(obj, "operators").forEach(e ->
-                operators.add(UUID.fromString(JsonHelper.asString(e, "uuid"))));
+        GsonHelper.getAsJsonArray(obj, "operators").forEach(e ->
+                operators.add(UUID.fromString(GsonHelper.convertToString(e, "uuid"))));
         final Set<UUID> players = new HashSet<>();
-        JsonHelper.getArray(obj, "players").forEach(e ->
-                players.add(UUID.fromString(JsonHelper.asString(e, "uuid"))));
+        GsonHelper.getAsJsonArray(obj, "players").forEach(e ->
+                players.add(UUID.fromString(GsonHelper.convertToString(e, "uuid"))));
         ItemSpeedrunRecord record = ItemSpeedrunRecord.fromJson(obj.get("record"), false);
         return new CoopRecord(record, operators, players);
     }
 
     @Override
-    public void onStop(Collection<? extends ServerPlayerEntity> players) {
+    public void onStop(Collection<? extends ServerPlayer> players) {
         CoopRecordAccess.super.onStop(players);
     }
 
     @Override
-    public void sudoJoin(UUID hostId, Collection<? extends ServerPlayerEntity> players) {
+    public void sudoJoin(UUID hostId, Collection<? extends ServerPlayer> players) {
         // what's it for
     }
 }

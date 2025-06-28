@@ -18,16 +18,16 @@
 
 package org.featurehouse.mcmod.speedrun.alphabeta.util.hooks;
 
-import net.minecraft.item.Item;
+import net.minecraft.core.HolderSet;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.obfuscate.DontObfuscate;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.entry.RegistryEntryList;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.screen.ScreenHandlerType;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.item.Item;
 import org.jetbrains.annotations.ApiStatus;
 
 import java.util.Optional;
@@ -35,37 +35,37 @@ import java.util.Optional;
 @ApiStatus.Internal
 public class MultiverseHooks {
     @DontObfuscate  // #5: getstatic #0 #11 #2; aload 0; invokevirtual #0 #15 #5; areturn
-    public static RegistryEntryList.Named<Item> itemTagHolders(TagKey<Item> tagKey) {
-        return Registries.ITEM.getOrThrow(tagKey);
+    public static HolderSet.Named<Item> itemTagHolders(TagKey<Item> tagKey) {
+        return BuiltInRegistries.ITEM.getOrThrow(tagKey);
     }
 
     @DontObfuscate  // #7: getstatic #0 #11 #2; aload 0; invokevirtual #0 #16 #6; areturn
-    public static Identifier itemId(Item item) {
-        return Registries.ITEM.getId(item);
+    public static ResourceLocation itemId(Item item) {
+        return BuiltInRegistries.ITEM.getKey(item);
     }
 
     @DontObfuscate  // #9: getstatic #0 #11 #2; aload 0; invokevirtual #0 #17 #8; checkcast #1; areturn
-    public static Item getItem(Identifier id) {
-        return Registries.ITEM.get(id);
+    public static Item getItem(ResourceLocation id) {
+        return BuiltInRegistries.ITEM.getValue(id);
     }
 
     @DontObfuscate
-    public static Item getItem(RegistryKey<Item> registryKey) {
-        return Registries.ITEM.get(registryKey);
+    public static Item getItem(ResourceKey<Item> registryKey) {
+        return BuiltInRegistries.ITEM.getValue(registryKey);
     }
 
     @DontObfuscate  // #10: getstatic #0 #11 #2; aload 0; invokevirtual #0 #18 #10; areturn
-    public static Optional<Item> getOptionalItem(Identifier id) {
-        return Registries.ITEM.getOptionalValue(id);
+    public static Optional<Item> getOptionalItem(ResourceLocation id) {
+        return BuiltInRegistries.ITEM.getOptional(id);
     }
 
     @DontObfuscate  // ()#3: getstatic #0 #12 #3; areturn
-    public static RegistryKey<Registry<Item>> itemKey() {
-        return RegistryKeys.ITEM;
+    public static ResourceKey<Registry<Item>> itemKey() {
+        return Registries.ITEM;
     }
 
     @DontObfuscate  // ()#3: getstatic #0 #14 #3; areturn
-    public static RegistryKey<Registry<ScreenHandlerType<?>>> menuKey() {
-        return RegistryKeys.SCREEN_HANDLER;
+    public static ResourceKey<Registry<MenuType<?>>> menuKey() {
+        return Registries.MENU;
     }
 }

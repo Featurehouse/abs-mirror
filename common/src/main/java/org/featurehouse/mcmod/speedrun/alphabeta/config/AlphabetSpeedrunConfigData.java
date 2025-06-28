@@ -19,7 +19,6 @@
 package org.featurehouse.mcmod.speedrun.alphabeta.config;
 
 import com.google.common.base.Preconditions;
-import net.minecraft.util.Identifier;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.difficulty.DefaultItemSpeedrunDifficulty;
@@ -32,6 +31,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import net.minecraft.resources.ResourceLocation;
 
 public class AlphabetSpeedrunConfigData {
     final static int CURRENT_SCHEMA = 10;
@@ -518,17 +518,17 @@ public class AlphabetSpeedrunConfigData {
                             yield (inverted -> new ItemRunDifficultyRuleFactory.Impl(Collections.emptyList(), !inverted));
                         if ("NONE".equals(s))
                             yield (inverted -> new ItemRunDifficultyRuleFactory.Impl(Collections.emptyList(), inverted));
-                        BiFunction<Identifier, Boolean, ItemRunDifficultyRuleFactory> fun = (identifier, inverted) ->
+                        BiFunction<ResourceLocation, Boolean, ItemRunDifficultyRuleFactory> fun = (identifier, inverted) ->
                                 new ItemRunDifficultyRuleFactory.Impl(Collections.singletonList(identifier), inverted);
-                        if (s.startsWith("!")) yield (inverted) -> fun.apply(Identifier.of(s.substring(1)), inverted);
-                        yield (inverted) -> fun.apply(Identifier.of(s), inverted);
+                        if (s.startsWith("!")) yield (inverted) -> fun.apply(ResourceLocation.parse(s.substring(1)), inverted);
+                        yield (inverted) -> fun.apply(ResourceLocation.parse(s), inverted);
                     }
 
                     case BEGIN_ARRAY -> {
-                        List<Identifier> idList = new ArrayList<>();
+                        List<ResourceLocation> idList = new ArrayList<>();
                         reader.beginArray();
                         while (reader.peek() != JsonToken.END_ARRAY) {
-                            Identifier id = Identifier.of(reader.nextString());
+                            ResourceLocation id = ResourceLocation.parse(reader.nextString());
                             idList.add(id);
                         }
                         reader.endArray();

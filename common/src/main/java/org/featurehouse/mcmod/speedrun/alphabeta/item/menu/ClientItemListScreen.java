@@ -20,70 +20,71 @@ package org.featurehouse.mcmod.speedrun.alphabeta.item.menu;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gl.RenderPipelines;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Inventory;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 
 @Environment(EnvType.CLIENT)
-public class ClientItemListScreen extends HandledScreen<ItemListViewMenu> {
-    private static final Identifier TEXTURE_PTH = Identifier.of("alphabet_speedrun", "textures/gui/view.png");
+public class ClientItemListScreen extends AbstractContainerScreen<ItemListViewMenu> {
+    private static final ResourceLocation TEXTURE_PTH = ResourceLocation.fromNamespaceAndPath("alphabet_speedrun", "textures/gui/view.png");
 
-    public ClientItemListScreen(ItemListViewMenu handler, PlayerInventory inventory, Text title) {
+    public ClientItemListScreen(ItemListViewMenu handler, Inventory inventory, Component title) {
         super(handler, inventory, title);
     }
 
     @Override
-    protected void drawBackground(DrawContext context, float delta, int mouseX, int mouseY) {
-        context.drawTexture(RenderPipelines.GUI_TEXTURED, TEXTURE_PTH, x, y, 0F, 0F, backgroundWidth, backgroundHeight, 176, 166);
+    protected void renderBg(GuiGraphics context, float delta, int mouseX, int mouseY) {
+        context.blit(RenderPipelines.GUI_TEXTURED, TEXTURE_PTH, leftPos, topPos, 0F, 0F, imageWidth, imageHeight, 176, 166);
         // Arrows
-        if (handler.hasPrevPage()) context.drawTexture(RenderPipelines.GUI_TEXTURED, TEXTURE_PTH, x + 7, y + 149, 176, 0, backgroundWidth, backgroundHeight, 18, 10);
-        if (handler.hasNextPage()) context.drawTexture(RenderPipelines.GUI_TEXTURED, TEXTURE_PTH, x + 151, y + 149, 176, 10, backgroundWidth, backgroundHeight, 18, 10);
+        if (menu.hasPrevPage()) context.blit(RenderPipelines.GUI_TEXTURED, TEXTURE_PTH, leftPos + 7, topPos + 149, 176, 0, imageWidth, imageHeight, 18, 10);
+        if (menu.hasNextPage()) context.blit(RenderPipelines.GUI_TEXTURED, TEXTURE_PTH, leftPos + 151, topPos + 149, 176, 10, imageWidth, imageHeight, 18, 10);
         // Coloring
         for (int k = 0; k < 63; k++) {
-            final Boolean slotCompleted = handler.isSlotCompleted(k);
+            final Boolean slotCompleted = menu.isSlotCompleted(k);
             if (slotCompleted == null) break;
             if (!slotCompleted) {
-                context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, TEXTURE_PTH, x + 8 + 18 * (k % 9), y + 19 + 18 * (k / 9), 0, 166, backgroundWidth, backgroundHeight, 16, 16);
+                context.blitSprite(RenderPipelines.GUI_TEXTURED, TEXTURE_PTH, leftPos + 8 + 18 * (k % 9), topPos + 19 + 18 * (k / 9), 0, 166, imageWidth, imageHeight, 16, 16);
             } else {
-                context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, TEXTURE_PTH, x + 8 + 18 * (k % 9), y + 19 + 18 * (k / 9), 16, 166, backgroundWidth, backgroundHeight, 16, 16);
+                context.blitSprite(RenderPipelines.GUI_TEXTURED, TEXTURE_PTH, leftPos + 8 + 18 * (k % 9), topPos + 19 + 18 * (k / 9), 16, 166, imageWidth, imageHeight, 16, 16);
             }
         }
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (handler.hasPrevPage() && (x + 7) <= mouseX && mouseX <= (x + 25) &&
-                (y + 149) <= mouseY && mouseY <= (y + 159)) {
+        if (menu.hasPrevPage() && (leftPos + 7) <= mouseX && mouseX <= (leftPos + 25) &&
+                (topPos + 149) <= mouseY && mouseY <= (topPos + 159)) {
             //handler.prevPage();
-            this.requestTurnPage(handler.getPage() - 1);
+            this.requestTurnPage(menu.getPage() - 1);
             return true;
-        } else if (handler.hasNextPage() && (x + 151) <= mouseX && mouseX <= (x + 169) &&
-                (y + 149) <= mouseY && mouseY <= (y + 159)) {
-            this.requestTurnPage(handler.getPage() + 1);
+        } else if (menu.hasNextPage() && (leftPos + 151) <= mouseX && mouseX <= (leftPos + 169) &&
+                (topPos + 149) <= mouseY && mouseY <= (topPos + 159)) {
+            this.requestTurnPage(menu.getPage() + 1);
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
     private void requestTurnPage(int target) {
-        Objects.requireNonNull(Objects.requireNonNull(this.client).interactionManager).clickButton(handler.syncId, target);
+        Objects.requireNonNull(Objects.requireNonNull(this.minecraft).gameMode).handleInventoryButtonClick(menu.containerId, target);
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float deltaTicks) {
+    public void render(@NotNull GuiGraphics context, int mouseX, int mouseY, float deltaTicks) {
         this.renderBackground(context, mouseX, mouseY, deltaTicks);
         super.render(context, mouseX, mouseY, deltaTicks);
-        this.drawMouseoverTooltip(context, mouseX, mouseY);
+        this.renderTooltip(context, mouseX, mouseY);
     }
 
     @Override
-    protected void drawForeground(DrawContext context, int mouseX, int mouseY) {
+    protected void renderLabels(GuiGraphics context, int mouseX, int mouseY) {
         // Don't draw inventory title
-        context.drawText(textRenderer, this.title, this.titleX, this.titleY, 4210752, false);
+        context.drawString(font, this.title, this.titleLabelX, this.titleLabelY, 4210752, false);
     }
 }

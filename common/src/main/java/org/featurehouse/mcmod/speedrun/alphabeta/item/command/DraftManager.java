@@ -19,10 +19,6 @@
 package org.featurehouse.mcmod.speedrun.alphabeta.item.command;
 
 import com.google.common.collect.Sets;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Util;
 import org.featurehouse.mcmod.speedrun.alphabeta.config.AlphabetSpeedrunConfigData;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.ItemRecordAccess;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.RecordSnapshot;
@@ -30,6 +26,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import net.minecraft.Util;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 
 public class DraftManager {
     private static final ThreadLocal<DraftManager> INSTANCES = ThreadLocal.withInitial(DraftManager::new);
@@ -47,8 +47,8 @@ public class DraftManager {
         }
     }
 
-    public @Nullable Draft get(ServerPlayerEntity player) {
-        return drafts.get(player.getUuid());
+    public @Nullable Draft get(ServerPlayer player) {
+        return drafts.get(player.getUUID());
     }
 
     private static final boolean isDraftSupported = Util.make(() -> {
@@ -60,89 +60,89 @@ public class DraftManager {
         }
     });
 
-    public Optional<Text> createDraft(ServerPlayerEntity serverPlayer) {
+    public Optional<Component> createDraft(ServerPlayer serverPlayer) {
         if (!isDraftSupported) {
-            return Optional.of(Text.translatable("demo.speedrun.alphabet.draft"));
+            return Optional.of(Component.translatable("demo.speedrun.alphabet.draft"));
         }
         ItemRecordAccess acc;
         if ((acc = serverPlayer.alphabetSpeedrun$getItemRecordAccess()) != null)
-            return Optional.of(Text.translatable("command.speedrun.alphabet.draft.running",
-                    RecordSnapshot.fromRecord(acc, Objects.requireNonNull(serverPlayer.getServer()).getOverworld().getTime()).asText()));
+            return Optional.of(Component.translatable("command.speedrun.alphabet.draft.running",
+                    RecordSnapshot.fromRecord(acc, Objects.requireNonNull(serverPlayer.getServer()).overworld().getGameTime()).asText()));
         UUID uuid;
-        if (drafts.containsKey(uuid = serverPlayer.getUuid()))
-            return Optional.of(Text.translatable("command.speedrun.alphabet.draft.dup"));
+        if (drafts.containsKey(uuid = serverPlayer.getUUID()))
+            return Optional.of(Component.translatable("command.speedrun.alphabet.draft.dup"));
         drafts.put(uuid, new Draft());
         return Optional.empty();
     }
 
-    public Optional<Text> invite(ServerPlayerEntity host, Collection<? extends ServerPlayerEntity> players) {
-        final UUID uuid = host.getUuid();
+    public Optional<Component> invite(ServerPlayer host, Collection<? extends ServerPlayer> players) {
+        final UUID uuid = host.getUUID();
         Draft draft;
         if ((draft = drafts.get(uuid)) == null) return Optional.empty();
 
         invitations.computeIfAbsent(draft, u0 -> Sets.newHashSet())
                 .addAll(players.stream()
-                .map(ServerPlayerEntity::getUuid)
+                .map(ServerPlayer::getUUID)
                 .map(InvitationCache::new)
                 .collect(Collectors.toSet()));
-        final Text info = draft.snapshot().asText();
+        final Component info = draft.snapshot().asText();
         Invitation invitation = new Invitation(uuid, draft.getSessionId(), info, Invitation.DRAFT);
-        final Text text = invitation.toText(Objects.requireNonNull(host.getServer()).getPlayerManager());
+        final Component text = invitation.toText(Objects.requireNonNull(host.getServer()).getPlayerList());
         if (text == null) return Optional.empty();
 
-        for (ServerPlayerEntity player : players) {
-            player.sendMessage(text.copy());
+        for (ServerPlayer player : players) {
+            player.sendSystemMessage(text.copy());
         }
         return Optional.of(info);
     }
 
-    public void respond(ServerPlayerEntity host, ServerPlayerEntity invited, UUID invitationCache, final boolean accept) {
-        final Draft draft = drafts.get(host.getUuid());
+    public void respond(ServerPlayer host, ServerPlayer invited, UUID invitationCache, final boolean accept) {
+        final Draft draft = drafts.get(host.getUUID());
         if (draft == null || !draft.sameSession(invitationCache)) {
             org.featurehouse.mcmod.speedrun.alphabeta.util.AlphaBetaDebug.log(1,l->l.info("HS={} SS={}",draft!=null?draft.getSessionId(): Util.NIL_UUID,invitationCache));
-            invited.sendMessage(Text.translatable("command.speedrun.alphabet.invite.absent"));
+            invited.sendSystemMessage(Component.translatable("command.speedrun.alphabet.invite.absent"));
             return;
         }
         final Set<InvitationCache> invitationCaches = invitations.get(draft);
         if (invitationCaches == null || invitationCaches.isEmpty()) {
-            invited.sendMessage(Text.translatable("command.speedrun.alphabet.invite.timeout"));
+            invited.sendSystemMessage(Component.translatable("command.speedrun.alphabet.invite.timeout"));
             return;
         }
-        invitationCaches.stream().filter(c -> invited.getUuid().equals(c.invitedPlayer())).findAny()
+        invitationCaches.stream().filter(c -> invited.getUUID().equals(c.invitedPlayer())).findAny()
                 .ifPresentOrElse(c -> {
                     if (accept) {
-                        draft.getPlayers().add(invited.getUuid());
-                        host.sendMessage(Text.translatable("command.speedrun.alphabet.invite.accepted", invited.getDisplayName()));
+                        draft.getPlayers().add(invited.getUUID());
+                        host.sendSystemMessage(Component.translatable("command.speedrun.alphabet.invite.accepted", invited.getDisplayName()));
                         // TODO: welcome
                     } else {
-                        host.sendMessage(Text.translatable("command.speedrun.alphabet.invite.denied", invited.getDisplayName()));
+                        host.sendSystemMessage(Component.translatable("command.speedrun.alphabet.invite.denied", invited.getDisplayName()));
                     }
                     invitationCaches.remove(c);
-                }, () -> invited.sendMessage(Text.translatable("command.speedrun.alphabet.invite.timeout")));
+                }, () -> invited.sendSystemMessage(Component.translatable("command.speedrun.alphabet.invite.timeout")));
     }
 
-    public int submit(ServerCommandSource source, ServerPlayerEntity serverPlayer) {
-        UUID uuid = serverPlayer.getUuid();
+    public int submit(CommandSourceStack source, ServerPlayer serverPlayer) {
+        UUID uuid = serverPlayer.getUUID();
         Draft draft;
         if ((draft = drafts.get(uuid)) == null) {
-            source.sendError(Text.translatable("command.speedrun.alphabet.draft.not_found"));
+            source.sendFailure(Component.translatable("command.speedrun.alphabet.draft.not_found"));
             return 0;
         }
 
         final AlphabetSpeedrunConfigData.Permissions permissions = AlphabetSpeedrunConfigData.getInstance().getPermissions();
-        if (!source.hasPermissionLevel(AlphabetSpeedrunConfigData.getInstance().getDifficultDifficulties().contains(draft.getDifficulty())
+        if (!source.hasPermission(AlphabetSpeedrunConfigData.getInstance().getDifficultDifficulties().contains(draft.getDifficulty())
                 ? permissions.getDifficultStart() : permissions.getNormalStart())) {
-            source.sendError(Text.translatable("command.speedrun.alphabet.no_permission"));
+            source.sendFailure(Component.translatable("command.speedrun.alphabet.no_permission"));
             return 0;
         }
 
         int i;
         if ((i = invitations.getOrDefault(draft, Collections.emptySet()).size()) != 0) {
-            source.sendError(Text.translatable("command.speedrun.alphabet.invite.respond.wait", i));
+            source.sendFailure(Component.translatable("command.speedrun.alphabet.invite.respond.wait", i));
             return 0;
         }
 
-        if ((i = ItemSpeedrunCommandHandle.startFromDraft(source::sendError, serverPlayer, draft)) == 0)
+        if ((i = ItemSpeedrunCommandHandle.startFromDraft(source::sendFailure, serverPlayer, draft)) == 0)
             return 0;
         invitations.remove(draft);
         return i;

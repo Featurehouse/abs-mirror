@@ -21,13 +21,6 @@ package org.featurehouse.mcmod.speedrun.alphabeta.item;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
-import net.minecraft.text.HoverEvent;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.text.Texts;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.JsonHelper;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.command.PlayType;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.difficulty.DefaultItemSpeedrunDifficulty;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.difficulty.ItemSpeedrunDifficulty;
@@ -35,8 +28,15 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 import java.util.UUID;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentUtils;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.GsonHelper;
 
-public record RecordSnapshot(long duration, int collected, int required, Identifier goalId, ItemSpeedrunDifficulty difficulty, UUID recordId, PlayType playType) {
+public record RecordSnapshot(long duration, int collected, int required, ResourceLocation goalId, ItemSpeedrunDifficulty difficulty, UUID recordId, PlayType playType) {
     public static RecordSnapshot fromRecord(ItemRecordAccess record, long currentTime) {
         long duration = record.timeSince(currentTime);
         return new RecordSnapshot(duration, record.getCollectedCount(), record.predicates().size(),
@@ -44,18 +44,18 @@ public record RecordSnapshot(long duration, int collected, int required, Identif
     }
 
     static RecordSnapshot fromPvpRecordJson(@NotNull JsonObject obj, long currentTime) throws JsonSyntaxException {
-        Identifier goalId = Identifier.of(JsonHelper.getString(obj, "goal_id"));
-        Identifier difficulty = Identifier.of(JsonHelper.getString(obj, "difficulty"));
-        UUID recordId = UUID.fromString(JsonHelper.getString(obj, "record_id"));
+        ResourceLocation goalId = ResourceLocation.parse(GsonHelper.getAsString(obj, "goal_id"));
+        ResourceLocation difficulty = ResourceLocation.parse(GsonHelper.getAsString(obj, "difficulty"));
+        UUID recordId = UUID.fromString(GsonHelper.getAsString(obj, "record_id"));
         int required;
-        if (JsonHelper.hasArray(obj, "displayed_stacks")) {
+        if (GsonHelper.isArrayNode(obj, "displayed_stacks")) {
             // Old schema before v3.0.x
-            required = JsonHelper.getArray(obj, "displayed_stacks").size();
+            required = GsonHelper.getAsJsonArray(obj, "displayed_stacks").size();
         } else {
-            required = JsonHelper.getArray(obj, "predicates").size();
+            required = GsonHelper.getAsJsonArray(obj, "predicates").size();
         }
         int collected = 0; {
-            var arr = JsonHelper.getArray(obj, "collected");
+            var arr = GsonHelper.getAsJsonArray(obj, "collected");
             for (JsonElement e : arr) {
                 if (e.getAsLong() >= 0) {
                     collected++;
@@ -63,14 +63,14 @@ public record RecordSnapshot(long duration, int collected, int required, Identif
             }
         }
         long duration;
-        long startTime = JsonHelper.getLong(obj, "start_time");
-        long l = JsonHelper.getLong(obj, "finish_time", -1);
+        long startTime = GsonHelper.getAsLong(obj, "start_time");
+        long l = GsonHelper.getAsLong(obj, "finish_time", -1);
         if (l < 0)
-            l = JsonHelper.getLong(obj, "last_quit_time", -1);
+            l = GsonHelper.getAsLong(obj, "last_quit_time", -1);
         if (l >= 0)
             duration = l - startTime;
         else
-            duration = currentTime - startTime - JsonHelper.getLong(obj, "vacant_time", 0);
+            duration = currentTime - startTime - GsonHelper.getAsLong(obj, "vacant_time", 0);
         return new RecordSnapshot(duration, collected, required, goalId, DefaultItemSpeedrunDifficulty.getDifficulty(difficulty), recordId, PlayType.PVP);
     }
 
@@ -78,37 +78,37 @@ public record RecordSnapshot(long duration, int collected, int required, Identif
         return collected() == required();
     }
 
-    public Text asText() {
-        return Texts.bracketed(Text.empty() // To avoid things after '#' are bolded
+    public Component asText() {
+        return ComponentUtils.wrapInSquareBrackets(Component.empty() // To avoid things after '#' are bolded
                         .append(Optional.ofNullable(ItemSpeedrun.get(this.goalId()))
                                 .map(spr -> spr.display().copy())
-                                .orElseGet(() -> Text.translatable("message.speedrun_alphabet.item.goal.unknown"))
-                        ).append(Text.literal("#" + ItemRecordMessages.uuidShort(this.recordId())).formatted(Formatting.GRAY)))
-                .styled(style -> style.withHoverEvent(new HoverEvent.ShowText(recordInnerText())));
+                                .orElseGet(() -> Component.translatable("message.speedrun_alphabet.item.goal.unknown"))
+                        ).append(Component.literal("#" + ItemRecordMessages.uuidShort(this.recordId())).withStyle(ChatFormatting.GRAY)))
+                .withStyle(style -> style.withHoverEvent(new HoverEvent.ShowText(recordInnerText())));
     }
 
-    private Text recordInnerText() {
-        MutableText t = Text.empty();
-        t.append(Text.translatable("message.speedrun_alphabet.item.record.goal_id", this.goalId()))
+    private Component recordInnerText() {
+        MutableComponent t = Component.empty();
+        t.append(Component.translatable("message.speedrun_alphabet.item.record.goal_id", this.goalId()))
                 .append("\n");
-        t.append(Text.translatable("message.speedrun_alphabet.item.record.snapshot.play_type", playType().getText()))
+        t.append(Component.translatable("message.speedrun_alphabet.item.record.snapshot.play_type", playType().getText()))
                 .append("\n");
-        t.append(Text.translatable("message.speedrun_alphabet.item.record.difficulty", difficulty().asText()))
+        t.append(Component.translatable("message.speedrun_alphabet.item.record.difficulty", difficulty().asText()))
                 .append("\n");
         if (this.required() >= 0) { // otherwise stub
             if (this.isFinished()) {
-                t.append(Text.translatable("message.speedrun_alphabet.item.record.progress",
-                        Text.translatable("message.speedrun_alphabet.item.record.progress.data",
-                                this.collected(), this.required()).formatted(Formatting.GREEN))).append("\n");
-                t.append(Text.translatable("message.speedrun_alphabet.item.record.finish_time", ItemRecordMessages.time(this.duration()))).append("\n");
+                t.append(Component.translatable("message.speedrun_alphabet.item.record.progress",
+                        Component.translatable("message.speedrun_alphabet.item.record.progress.data",
+                                this.collected(), this.required()).withStyle(ChatFormatting.GREEN))).append("\n");
+                t.append(Component.translatable("message.speedrun_alphabet.item.record.finish_time", ItemRecordMessages.time(this.duration()))).append("\n");
             } else {
-                t.append(Text.translatable("message.speedrun_alphabet.item.record.progress",
-                        Text.translatable("message.speedrun_alphabet.item.record.progress.data",
-                                this.collected(), this.required()).formatted(Formatting.RED))).append("\n");
+                t.append(Component.translatable("message.speedrun_alphabet.item.record.progress",
+                        Component.translatable("message.speedrun_alphabet.item.record.progress.data",
+                                this.collected(), this.required()).withStyle(ChatFormatting.RED))).append("\n");
             }
-            t.append(Text.translatable("message.speedrun_alphabet.item.record.id", this.recordId())).append("\n");
+            t.append(Component.translatable("message.speedrun_alphabet.item.record.id", this.recordId())).append("\n");
         }
-        t.append(Text.translatable("message.speedrun_alphabet.item.non-synced").formatted(Formatting.GRAY));
+        t.append(Component.translatable("message.speedrun_alphabet.item.non-synced").withStyle(ChatFormatting.GRAY));
         return t;
     }
 }

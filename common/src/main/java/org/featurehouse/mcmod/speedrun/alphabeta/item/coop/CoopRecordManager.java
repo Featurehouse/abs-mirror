@@ -154,6 +154,6 @@ public class CoopRecordManager implements SavableResource {
     }
 
     public static CoopRecordManager fromServer(MinecraftServer server) {
-        return ((CoopablePlayerList) server.getPlayerManager()).alphabetSpeedrun$getCoopManager();
+        return ((CoopablePlayerList) server.getPlayerList()).alphabetSpeedrun$getCoopManager();
     }
 }

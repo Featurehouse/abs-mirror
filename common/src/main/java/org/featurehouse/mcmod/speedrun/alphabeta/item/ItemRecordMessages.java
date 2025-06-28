@@ -18,59 +18,59 @@
 
 package org.featurehouse.mcmod.speedrun.alphabeta.item;
 
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.NbtComponent;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.PlayerManager;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 import java.util.UUID;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.players.PlayerList;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 
 @ApiStatus.Internal
 public final class ItemRecordMessages {
 
-    public static Text itemCollected(PlayerEntity player, ItemStack displayedStack,
+    public static Component itemCollected(Player player, ItemStack displayedStack,
                                      ItemRecordAccess record, long currentTime,
                                      @Nullable ItemStack actualStack) {
-        final Text entityName = player.getDisplayName();
-        final Text itemName = displayedStack.toHoverableText();
+        final Component entityName = player.getDisplayName();
+        final Component itemName = displayedStack.getDisplayName();
         final int size0 = record.getCollectedCount();
         final int size1 = record.predicates().size();
         RecordSnapshot record1 = RecordSnapshot.fromRecord(record, currentTime);
-        final Text time = time(record1.duration());
+        final Component time = time(record1.duration());
         if (actualStack != null) {
-            final NbtCompound nbt = Optional.ofNullable(actualStack.get(DataComponentTypes.CUSTOM_DATA)).map(NbtComponent::copyNbt).orElse(new NbtCompound());
+            final CompoundTag nbt = Optional.ofNullable(actualStack.get(DataComponents.CUSTOM_DATA)).map(CustomData::copyTag).orElse(new CompoundTag());
             switch (nbt.getByte("AlphabetSpeedrunDisplaysReal").orElse((byte) 0)) {
                 case 1 -> {
-                    final Text actualName = actualStack.toHoverableText();
-                    return Text.translatable("message.speedrun.alphabet.item.collected.with_actual",
+                    final Component actualName = actualStack.getDisplayName();
+                    return Component.translatable("message.speedrun.alphabet.item.collected.with_actual",
                             entityName, itemName, size0, size1, time, record1.asText(), actualName);
                 }
                 case 2 -> {
-                    final Text actualName = actualStack.toHoverableText();
-                    return Text.translatable("message.speedrun.alphabet.item.collected.actual_only",
+                    final Component actualName = actualStack.getDisplayName();
+                    return Component.translatable("message.speedrun.alphabet.item.collected.actual_only",
                             entityName, actualName, size0, size1, time, record1.asText());
                 }
             }
         }
-        return Text.translatable("message.speedrun.alphabet.item.collected",
+        return Component.translatable("message.speedrun.alphabet.item.collected",
                 entityName, itemName, size0, size1, time, record1.asText());
     }
 
-    public static Text itemCompleted(PlayerEntity player, ItemRecordAccess record, long currentTime) {
-        final Text entityName = player.getDisplayName();
+    public static Component itemCompleted(Player player, ItemRecordAccess record, long currentTime) {
+        final Component entityName = player.getDisplayName();
         final int size = record.predicates().size();
         //final Text time = time(record.timeSince(currentTime));
         RecordSnapshot record1 = RecordSnapshot.fromRecord(record, currentTime);
-        final Text time = time(record1.duration());
-        return Text.translatable("message.speedrun.alphabet.item.completed",
+        final Component time = time(record1.duration());
+        return Component.translatable("message.speedrun.alphabet.item.completed",
                 entityName, size, time, record1.asText());
     }
 
@@ -86,28 +86,28 @@ public final class ItemRecordMessages {
         return String.valueOf(c);
     }
 
-    public static Text time(final long ticks) {
-        if (ticks < 0) return Text.translatable("speedrun.alphabet.time_format.unknown", ticks);
+    public static Component time(final long ticks) {
+        if (ticks < 0) return Component.translatable("speedrun.alphabet.time_format.unknown", ticks);
         long seconds = ticks / 20;
         long minutes = seconds / 60;
         if (minutes == 0)
-            return Text.translatable("speedrun.alphabet.time_format.s", seconds);
+            return Component.translatable("speedrun.alphabet.time_format.s", seconds);
         seconds %= 60;
         long hours = minutes / 60;
         if (hours == 0)
-            return Text.translatable("speedrun.alphabet.time_format.ms", minutes, seconds);
+            return Component.translatable("speedrun.alphabet.time_format.ms", minutes, seconds);
         minutes %= 60;
-        return Text.translatable("speedrun.alphabet.time_format.hms", hours, minutes, seconds);
+        return Component.translatable("speedrun.alphabet.time_format.hms", hours, minutes, seconds);
     }
 
-    public static void sendSound(PlayerManager mgr, SoundEvent sound) {
-        mgr.getPlayerList().forEach(p -> p.playSound(sound, .8F, 1.0F));
+    public static void sendSound(PlayerList mgr, SoundEvent sound) {
+        mgr.getPlayers().forEach(p -> p.playSound(sound, .8F, 1.0F));
     }
 
-    public static void sendWinSound(PlayerEntity winner, PlayerManager mgr) {
-        mgr.getPlayerList().forEach(p -> {
+    public static void sendWinSound(Player winner, PlayerList mgr) {
+        mgr.getPlayers().forEach(p -> {
             if (p != winner) {
-                p.playSound(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, .8F, 1.0F);
+                p.playSound(SoundEvents.EXPERIENCE_ORB_PICKUP, .8F, 1.0F);
             } else {
                 p.playSound(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, .8F, 1.0F);
             }

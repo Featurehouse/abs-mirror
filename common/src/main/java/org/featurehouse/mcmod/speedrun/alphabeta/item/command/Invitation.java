@@ -18,35 +18,35 @@
 
 package org.featurehouse.mcmod.speedrun.alphabeta.item.command;
 
-import net.minecraft.server.PlayerManager;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.ClickEvent;
-import net.minecraft.text.Text;
-import net.minecraft.text.Texts;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentUtils;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.PlayerList;
 
-public record Invitation(UUID host, UUID sessionIdCache, Text info, int type) {
+public record Invitation(UUID host, UUID sessionIdCache, Component info, int type) {
     public static final int DRAFT = 1, COOP = 2, PVP = 3;
     public static final int ACCEPT = 4;
 
     @Nullable
-    public Text toText(PlayerManager manager) {
-        final ServerPlayerEntity player = manager.getPlayer(host());
+    public Component toText(PlayerList manager) {
+        final ServerPlayer player = manager.getPlayer(host());
         if (player == null) return null;
         //final String subcommand = isDraft() ? "respond_draft" : "respond_coop";
-        return Text.translatable("command.speedrun.alphabet.invite",
-                Texts.bracketed(player.getDisplayName()),
+        return Component.translatable("command.speedrun.alphabet.invite",
+                ComponentUtils.wrapInSquareBrackets(player.getDisplayName()),
                 this.info(),
-                Text.translatable("command.speedrun.alphabet.invite.accept")
-                        .styled(s -> s.withClickEvent(new ClickEvent.RunCommand(
+                Component.translatable("command.speedrun.alphabet.invite.accept")
+                        .withStyle(s -> s.withClickEvent(new ClickEvent.RunCommand(
                                 String.format("/itemspeedrun invite respond %d %s %s",
                                         type() + ACCEPT,
                                         player.getGameProfile().getName(),
                                         sessionIdCache())))),
-                Text.translatable("command.speedrun.alphabet.invite.deny")
-                        .styled(s -> s.withClickEvent(new ClickEvent.RunCommand(
+                Component.translatable("command.speedrun.alphabet.invite.deny")
+                        .withStyle(s -> s.withClickEvent(new ClickEvent.RunCommand(
                                 String.format("/itemspeedrun invite respond %d %s %s",
                                         type(),
                                         player.getGameProfile().getName(),

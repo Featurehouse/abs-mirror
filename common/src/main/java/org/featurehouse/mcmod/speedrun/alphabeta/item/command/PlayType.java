@@ -18,7 +18,7 @@
 
 package org.featurehouse.mcmod.speedrun.alphabeta.item.command;
 
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
 
 public enum PlayType {
     PVP("pvp", "message.speedrun_alphabet.item.play_type.pvp"),
@@ -32,8 +32,8 @@ public enum PlayType {
         this.key = key;
     }
 
-    public Text getText() {
-        return Text.translatable(key);
+    public Component getText() {
+        return Component.translatable(key);
     }
 
     public String getId() {

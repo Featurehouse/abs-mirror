@@ -18,10 +18,10 @@
 
 package org.featurehouse.mcmod.speedrun.alphabeta.item.components;
 
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.util.Unit;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.featurehouse.mcmod.speedrun.alphabeta.config.AlphabetSpeedrunConfigData;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.ItemRecordAccess;
 import org.jetbrains.annotations.NotNull;
@@ -36,13 +36,13 @@ public class FireworkElytraUtils {
 
     public static void handleFireworkDecrement(ItemStack stack, int dec) {
         if (stack.get(ABSItemDataComponents.NO_SHRINKING.get()) != null)
-            stack.decrement(dec);
+            stack.shrink(dec);
     }
 
     public static ItemStack mapBypassing(ItemStack stack) {
-        if (stack.isOf(Items.FIREWORK_ROCKET)) {
+        if (stack.is(Items.FIREWORK_ROCKET)) {
             final int stackCount = stack.getCount();
-            stack = Items.FIREWORK_ROCKET.getDefaultStack();
+            stack = Items.FIREWORK_ROCKET.getDefaultInstance();
             stack.setCount(stackCount);
         } else {
             stack = stack.copy();
@@ -53,9 +53,9 @@ public class FireworkElytraUtils {
 
     public static ItemStack mapInfinite(ItemStack stack) {
         stack = stack.copy();
-        if (stack.isOf(Items.ELYTRA)) {
-            stack.set(DataComponentTypes.UNBREAKABLE, Unit.INSTANCE);
-        } else if (stack.isOf(Items.FIREWORK_ROCKET)) {
+        if (stack.is(Items.ELYTRA)) {
+            stack.set(DataComponents.UNBREAKABLE, Unit.INSTANCE);
+        } else if (stack.is(Items.FIREWORK_ROCKET)) {
             stack.set(ABSItemDataComponents.NO_SHRINKING.get(), Unit.INSTANCE);
         }
         return stack;
@@ -65,7 +65,7 @@ public class FireworkElytraUtils {
     public static ItemStack newInfElytra() {
         final ItemStack stack = new ItemStack(Items.ELYTRA, 1);
         stack.set(ABSItemDataComponents.BYPASSES_ITEM_CHECK.get(), Unit.INSTANCE);
-        stack.set(DataComponentTypes.UNBREAKABLE, Unit.INSTANCE);
+        stack.set(DataComponents.UNBREAKABLE, Unit.INSTANCE);
         return stack;
     }
 

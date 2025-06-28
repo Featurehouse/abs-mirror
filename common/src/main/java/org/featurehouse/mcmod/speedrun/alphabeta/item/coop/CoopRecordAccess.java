@@ -19,18 +19,18 @@
 package org.featurehouse.mcmod.speedrun.alphabeta.item.coop;
 
 import com.google.gson.JsonObject;
-import net.minecraft.server.network.ServerPlayerEntity;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.ItemRecordAccess;
 
 import java.util.Collection;
 import java.util.UUID;
+import net.minecraft.server.level.ServerPlayer;
 
 public interface CoopRecordAccess extends ItemRecordAccess {
     Collection<UUID> getPlayers();
     Collection<UUID> getOperators();
 
-    default boolean isOp(ServerPlayerEntity player) {
-        return getOperators().contains(player.getUuid());
+    default boolean isOp(ServerPlayer player) {
+        return getOperators().contains(player.getUUID());
     }
 
     @Override

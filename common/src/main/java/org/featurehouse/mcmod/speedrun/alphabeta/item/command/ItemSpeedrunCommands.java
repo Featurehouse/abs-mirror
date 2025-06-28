@@ -26,14 +26,6 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.logging.LogUtils;
-import net.minecraft.command.argument.EntityArgumentType;
-import net.minecraft.command.argument.IdentifierArgumentType;
-import net.minecraft.command.argument.UuidArgumentType;
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
 import org.featurehouse.mcmod.speedrun.alphabeta.config.AlphabetSpeedrunConfigData;
 import org.featurehouse.mcmod.speedrun.alphabeta.config.AlphabetSpeedrunConfigData.Permissions;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.ItemRecordAccess;
@@ -54,18 +46,26 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.IntSupplier;
 import java.util.function.ToIntFunction;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.ResourceLocationArgument;
+import net.minecraft.commands.arguments.UuidArgument;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 
-import static net.minecraft.server.command.CommandManager.argument;
-import static net.minecraft.server.command.CommandManager.literal;
+import static net.minecraft.commands.Commands.argument;
+import static net.minecraft.commands.Commands.literal;
 
 public class ItemSpeedrunCommands {
-    static Command<ServerCommandSource> command(ToIntFunction<Permissions> permission, Function<HelperEnv, Command<ServerCommandSource>> wrapped) {
+    static Command<CommandSourceStack> command(ToIntFunction<Permissions> permission, Function<HelperEnv, Command<CommandSourceStack>> wrapped) {
         return s -> {
-            if (!s.getSource().hasPermissionLevel(permission.applyAsInt(AlphabetSpeedrunConfigData.getInstance().getPermissions()))) {
-                s.getSource().sendError(Text.translatable("command.speedrun.alphabet.no_permission"));
+            if (!s.getSource().hasPermission(permission.applyAsInt(AlphabetSpeedrunConfigData.getInstance().getPermissions()))) {
+                s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.no_permission"));
                 return 0;
             }
-            Command<ServerCommandSource> c;
+            Command<CommandSourceStack> c;
             try {
                 c = wrapped.apply(new HelperEnv());
                 return c.run(s);
@@ -75,7 +75,7 @@ public class ItemSpeedrunCommands {
         };
     }
 
-    private static SuggestionProvider<ServerCommandSource> suggestGoal() {
+    private static SuggestionProvider<CommandSourceStack> suggestGoal() {
         return (context, builder) -> {
             ItemSpeedrun.DataLoader.getCurrentData().keySet()
                     .forEach(id -> builder.suggest(id.toString()));
@@ -83,21 +83,21 @@ public class ItemSpeedrunCommands {
         };
     }
 
-    public static void registerCommands(CommandDispatcher<ServerCommandSource> dispatcher) {
+    public static void registerCommands(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(literal("itemspeedrun")
                 .then(literal("start")
-                        .then(argument("goal", IdentifierArgumentType.identifier())
+                        .then(argument("goal", ResourceLocationArgument.id())
                                 .suggests(suggestGoal())
                                 .executes(command(a -> 0 /* placeholder - this is much complex*/,
                                         env -> s -> {
-                                            ServerPlayerEntity player = env.getPlayer(s);
+                                            ServerPlayer player = env.getPlayer(s);
                                             return startCmd(Collections.singleton(player), DefaultItemSpeedrunDifficulty.UU).run(s);
                                         }))
-                                .then(argument("players", EntityArgumentType.players())
+                                .then(argument("players", EntityArgument.players())
                                         .executes(command(a -> 0,
-                                                env -> s -> startCmd(EntityArgumentType.getPlayers(s, "players"), DefaultItemSpeedrunDifficulty.UU).run(s)
+                                                env -> s -> startCmd(EntityArgument.getPlayers(s, "players"), DefaultItemSpeedrunDifficulty.UU).run(s)
                                         ))
-                                        .then(argument("difficulty", IdentifierArgumentType.identifier())
+                                        .then(argument("difficulty", ResourceLocationArgument.id())
                                                 .suggests((ctx, builder) -> {
                                                     DefaultItemSpeedrunDifficulty.getIdToObjMap().keySet()
                                                             .forEach(id -> builder.suggest(id.toString()));
@@ -105,9 +105,9 @@ public class ItemSpeedrunCommands {
                                                 })
                                                 .executes(command(a -> 0,
                                                         env -> s -> {
-                                                            Identifier difficultyId = IdentifierArgumentType.getIdentifier(s, "difficulty");
+                                                            ResourceLocation difficultyId = ResourceLocationArgument.getId(s, "difficulty");
                                                             ItemSpeedrunDifficulty difficulty = DefaultItemSpeedrunDifficulty.getDifficulty(difficultyId);
-                                                            return startCmd(EntityArgumentType.getPlayers(s, "players"), difficulty).run(s);
+                                                            return startCmd(EntityArgument.getPlayers(s, "players"), difficulty).run(s);
                                                         }))
                                         )
                                 )
@@ -116,12 +116,12 @@ public class ItemSpeedrunCommands {
                 .then(literal("draft")
                         .then(literal("create")
                                 .executes(command(Permissions::getDraft, env -> s -> {
-                                    final Optional<Text> err = DraftManager.get().createDraft(env.getPlayer(s));
+                                    final Optional<Component> err = DraftManager.get().createDraft(env.getPlayer(s));
                                     if (err.isPresent()) {
-                                        s.getSource().sendError(err.get());
+                                        s.getSource().sendFailure(err.get());
                                         return 0;
                                     } else {
-                                        s.getSource().sendMessage(Text.translatable("command.speedrun.alphabet.draft"));
+                                        s.getSource().sendSystemMessage(Component.translatable("command.speedrun.alphabet.draft"));
                                         return 1;
                                     }
                                 }))
@@ -130,26 +130,26 @@ public class ItemSpeedrunCommands {
                                 .executes(command(Permissions::getDraft, env -> s -> {
                                     final Draft draft = DraftManager.get().get(env.getPlayer(s));
                                     if (draft == null) {
-                                        s.getSource().sendError(Text.translatable("command.speedrun.alphabet.draft.not_found"));
+                                        s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.draft.not_found"));
                                         return 0;
                                     }
-                                    s.getSource().sendMessage(Text.translatable("command.speedrun.alphabet.draft.query", draft.snapshot().asText()));
+                                    s.getSource().sendSystemMessage(Component.translatable("command.speedrun.alphabet.draft.query", draft.snapshot().asText()));
                                     return 1;
                                 }))
                         )
                         .then(literal("setgoal")
-                                .then(argument("goal", IdentifierArgumentType.identifier())
+                                .then(argument("goal", ResourceLocationArgument.id())
                                         .suggests(suggestGoal())
                                         .executes(command(Permissions::getDraft, env -> s -> {
-                                            final ServerPlayerEntity player = env.getPlayer(s);
+                                            final ServerPlayer player = env.getPlayer(s);
                                             final Draft draft = DraftManager.get().get(player);
                                             if (draft == null) {
-                                                s.getSource().sendError(Text.translatable("command.speedrun.alphabet.draft.not_found"));
+                                                s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.draft.not_found"));
                                                 return 0;
                                             }
-                                            Identifier id = IdentifierArgumentType.getIdentifier(s, "goal");
+                                            ResourceLocation id = ResourceLocationArgument.getId(s, "goal");
                                             draft.setGoal(id);
-                                            s.getSource().sendMessage(Text.translatable("command.speedrun.alphabet.draft.set_goal", id));
+                                            s.getSource().sendSystemMessage(Component.translatable("command.speedrun.alphabet.draft.set_goal", id));
                                             return 1;
                                         }))
                                 )
@@ -160,88 +160,88 @@ public class ItemSpeedrunCommands {
                         .then(literal("setplaytype")
                                 .then(literal("pvp")
                                         .executes(command(Permissions::getDraft, env -> s -> {
-                                            final ServerPlayerEntity player = env.getPlayer(s);
+                                            final ServerPlayer player = env.getPlayer(s);
                                             final Draft draft = DraftManager.get().get(player);
                                             if (draft == null) {
-                                                s.getSource().sendError(Text.translatable("command.speedrun.alphabet.draft.not_found"));
+                                                s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.draft.not_found"));
                                                 return 0;
                                             }
                                             draft.setPlayType(PlayType.PVP);
-                                            player.sendMessage(Text.translatable("command.speedrun.alphabet.draft.set_play_type", PlayType.PVP.getText()));
+                                            player.sendSystemMessage(Component.translatable("command.speedrun.alphabet.draft.set_play_type", PlayType.PVP.getText()));
                                             return 1;
                                         }))
                                 )
                                 .then(literal("coop")
                                         .executes(command(Permissions::getDraft, env -> s -> {
-                                            final ServerPlayerEntity player = env.getPlayer(s);
+                                            final ServerPlayer player = env.getPlayer(s);
                                             final Draft draft = DraftManager.get().get(player);
                                             if (draft == null) {
-                                                s.getSource().sendError(Text.translatable("command.speedrun.alphabet.draft.not_found"));
+                                                s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.draft.not_found"));
                                                 return 0;
                                             }
                                             draft.setPlayType(PlayType.COOP);
-                                            player.sendMessage(Text.translatable("command.speedrun.alphabet.draft.set_play_type", PlayType.COOP.getText()));
+                                            player.sendSystemMessage(Component.translatable("command.speedrun.alphabet.draft.set_play_type", PlayType.COOP.getText()));
                                             return 1;
                                         }))
                                 )
                         )
                         .then(literal("setdifficulty")
-                                .then(argument("difficulty", IdentifierArgumentType.identifier())
+                                .then(argument("difficulty", ResourceLocationArgument.id())
                                         .suggests((ctx, builder) -> {
                                             DefaultItemSpeedrunDifficulty.getIdToObjMap().keySet()
                                                     .forEach(id -> builder.suggest(id.toString()));
                                             return builder.buildFuture();
                                         })
                                         .executes(command(Permissions::getDraft, env -> s -> {
-                                            final ServerPlayerEntity player = env.getPlayer(s);
+                                            final ServerPlayer player = env.getPlayer(s);
                                             final Draft draft = DraftManager.get().get(player);
                                             if (draft == null) {
-                                                s.getSource().sendError(Text.translatable("command.speedrun.alphabet.draft.not_found"));
+                                                s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.draft.not_found"));
                                                 return 0;
                                             }
-                                            Identifier difficulty0 = IdentifierArgumentType.getIdentifier(s, "difficulty");
+                                            ResourceLocation difficulty0 = ResourceLocationArgument.getId(s, "difficulty");
                                             final ItemSpeedrunDifficulty difficulty = DefaultItemSpeedrunDifficulty.getDifficulty(difficulty0);
                                             draft.setDifficulty(difficulty);
-                                            player.sendMessage(Text.translatable("command.speedrun.alphabet.draft.set_difficulty", difficulty.asText()));
+                                            player.sendSystemMessage(Component.translatable("command.speedrun.alphabet.draft.set_difficulty", difficulty.asText()));
                                             return 1;
                                         }))
                                 )
                         )
                         .then(literal("op")
                                 .then(literal("add")
-                                        .then(argument("players", EntityArgumentType.players())
+                                        .then(argument("players", EntityArgument.players())
                                                 .executes(command(Permissions::getDraft, env -> s -> {
-                                                    final ServerPlayerEntity player = env.getPlayer(s);
+                                                    final ServerPlayer player = env.getPlayer(s);
                                                     final Draft draft = DraftManager.get().get(player);
                                                     if (draft == null) {
-                                                        s.getSource().sendError(Text.translatable("command.speedrun.alphabet.draft.not_found"));
+                                                        s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.draft.not_found"));
                                                         return 0;
                                                     }
                                                     if (draft.getPlayType() != PlayType.COOP) {
-                                                        s.getSource().sendError(Text.translatable("command.speedrun.alphabet.draft.op.add.not_coop"));
+                                                        s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.draft.op.add.not_coop"));
                                                         return 0;
                                                     }
-                                                    EntityArgumentType.getPlayers(s, "players").forEach(p ->
-                                                            draft.getOperators().add(p.getUuid()));
+                                                    EntityArgument.getPlayers(s, "players").forEach(p ->
+                                                            draft.getOperators().add(p.getUUID()));
                                                     return 1;
                                                 }))
                                         )
                                 )
                                 .then(literal("remove")
-                                        .then(argument("players", EntityArgumentType.players())
+                                        .then(argument("players", EntityArgument.players())
                                                 .executes(command(Permissions::getDraft, env -> s -> {
-                                                    final ServerPlayerEntity player = env.getPlayer(s);
+                                                    final ServerPlayer player = env.getPlayer(s);
                                                     final Draft draft = DraftManager.get().get(player);
                                                     if (draft == null) {
-                                                        s.getSource().sendError(Text.translatable("command.speedrun.alphabet.draft.not_found"));
+                                                        s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.draft.not_found"));
                                                         return 0;
                                                     }
                                                     if (draft.getPlayType() != PlayType.COOP) {
-                                                        s.getSource().sendError(Text.translatable("command.speedrun.alphabet.draft.op.remove.not_coop"));
+                                                        s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.draft.op.remove.not_coop"));
                                                         return 0;
                                                     }
-                                                    EntityArgumentType.getPlayers(s, "players").forEach(p ->
-                                                            draft.getOperators().remove(p.getUuid()));
+                                                    EntityArgument.getPlayers(s, "players").forEach(p ->
+                                                            draft.getOperators().remove(p.getUUID()));
                                                     return 1;
                                                 }))
                                         )
@@ -250,19 +250,19 @@ public class ItemSpeedrunCommands {
                 )
                 .then(literal("invite")
                         .then(literal("send")
-                                .then(argument("players", EntityArgumentType.players())
+                                .then(argument("players", EntityArgument.players())
                                         .executes(command(Permissions::getInvite,
                                                 env -> s -> MultiplayerRecords.invite(env.getPlayer(s),
-                                                        EntityArgumentType.getPlayers(s, "players"), s.getSource()::sendError)))
+                                                        EntityArgument.getPlayers(s, "players"), s.getSource()::sendFailure)))
                                 )
                         )
                         .then(literal("respond")
                                 .then(argument("type", IntegerArgumentType.integer(1, 6))
-                                        .then(argument("host", EntityArgumentType.player())
-                                                .then(argument("session", UuidArgumentType.uuid())
+                                        .then(argument("host", EntityArgument.player())
+                                                .then(argument("session", UuidArgument.uuid())
                                                         .executes(command(Permissions::getJoin, env -> s -> {
-                                                            ServerPlayerEntity host = EntityArgumentType.getPlayer(s, "host");
-                                                            UUID session = UuidArgumentType.getUuid(s, "session");
+                                                            ServerPlayer host = EntityArgument.getPlayer(s, "host");
+                                                            UUID session = UuidArgument.getUuid(s, "session");
                                                             final int type = IntegerArgumentType.getInteger(s, "type");
                                                             MultiplayerRecords.respond(type & 3, host, env.getPlayer(s), session, type > Invitation.ACCEPT);
                                                             return 1;
@@ -274,33 +274,33 @@ public class ItemSpeedrunCommands {
                 )
                 .then(literal("quit")
                         .executes(command(a->0, env -> s -> {
-                            ServerPlayerEntity player = env.getPlayer(s);
-                            return ItemSpeedrunCommandHandle.quit(s.getSource()::sendError, player, true);
+                            ServerPlayer player = env.getPlayer(s);
+                            return ItemSpeedrunCommandHandle.quit(s.getSource()::sendFailure, player, true);
                         }))
                 )
                 .then(literal("stop")
                         .executes(command(Permissions::getStop, env -> s -> {
-                            ServerPlayerEntity player = env.getPlayer(s);
+                            ServerPlayer player = env.getPlayer(s);
                             return ItemSpeedrunCommandHandle.stop(s.getSource(), Collections.singleton(player));
                         }))
-                        .then(argument("players", EntityArgumentType.players())
+                        .then(argument("players", EntityArgument.players())
                                 .executes(command(Permissions::getStopOthers, env -> s -> {
-                                    final Collection<ServerPlayerEntity> players = EntityArgumentType.getPlayers(s, "players");
-                                    final ServerCommandSource source = s.getSource();
+                                    final Collection<ServerPlayer> players = EntityArgument.getPlayers(s, "players");
+                                    final CommandSourceStack source = s.getSource();
                                     return ItemSpeedrunCommandHandle.stop(source, players);
                                 }))
                         )
                 )
                 .then(literal("exposeto")
-                        .then(argument("player", EntityArgumentType.player())
+                        .then(argument("player", EntityArgument.player())
                                 .executes(command(a->0, env -> s -> {
-                                    final ServerPlayerEntity player = env.getPlayer(s);
+                                    final ServerPlayer player = env.getPlayer(s);
                                     final ItemRecordAccess rec = player.alphabetSpeedrun$getItemRecordAccess();
                                     if (rec == null || rec.isCoop()) {
-                                        s.getSource().sendError(Text.translatable("command.speedrun.alphabet.expose.not_found"));
+                                        s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.expose.not_found"));
                                         return 0;
                                     }
-                                    rec.addTrust(EntityArgumentType.getPlayer(s, "player").getUuid());
+                                    rec.addTrust(EntityArgument.getPlayer(s, "player").getUUID());
                                     return 1;
                                 }))
                         )
@@ -308,32 +308,32 @@ public class ItemSpeedrunCommands {
                 .then(literal("resume")
                         .then(literal("local")
                                 .executes(command(Permissions::getResume, env -> s -> {
-                                    ServerPlayerEntity player = env.getPlayer(s);
+                                    ServerPlayer player = env.getPlayer(s);
                                     return ItemSpeedrunCommandHandle.resumeLocal(s.getSource(), Collections.singleton(player));
                                 }))
-                                .then(argument("players", EntityArgumentType.players())
+                                .then(argument("players", EntityArgument.players())
                                         .executes(command(Permissions::getResumeOthers, env -> s -> {
-                                            final Collection<ServerPlayerEntity> players = EntityArgumentType.getPlayers(s, "players");
+                                            final Collection<ServerPlayer> players = EntityArgument.getPlayers(s, "players");
                                             return ItemSpeedrunCommandHandle.resumeLocal(s.getSource(), players);
                                         }))
                                 )
                         )
-                        .then(argument("record", UuidArgumentType.uuid())
+                        .then(argument("record", UuidArgument.uuid())
                                 .executes(command(Permissions::getResume, env -> s -> {
-                                    ServerPlayerEntity p = env.getPlayer(s);
-                                    ConcurrentUtils.run(StoredItemRecords.resumeRecord(p, UuidArgumentType.getUuid(s, "record")), e -> {
+                                    ServerPlayer p = env.getPlayer(s);
+                                    ConcurrentUtils.run(StoredItemRecords.resumeRecord(p, UuidArgument.getUuid(s, "record")), e -> {
                                         LOGGER.error("Failed to resume", e);
-                                        s.getSource().sendError(Text.translatable("command.speedrun.alphabet.resume.interrupted"));
+                                        s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.resume.interrupted"));
                                     });
                                     return 1;
                                 }))
-                                .then(argument("player", EntityArgumentType.player())
+                                .then(argument("player", EntityArgument.player())
                                         .executes(command(Permissions::getResumeOthers, env -> s -> {
-                                            final ServerPlayerEntity player = EntityArgumentType.getPlayer(s, "player");
+                                            final ServerPlayer player = EntityArgument.getPlayer(s, "player");
                                             ConcurrentUtils.run(StoredItemRecords.resumeRecord(player,
-                                                    UuidArgumentType.getUuid(s, "record")), e -> {
+                                                    UuidArgument.getUuid(s, "record")), e -> {
                                                 LOGGER.error("Failed to resume", e);
-                                                s.getSource().sendError(Text.translatable("command.speedrun.alphabet.resume.interrupted"));
+                                                s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.resume.interrupted"));
                                             });
                                             return 1;
                                         }))
@@ -342,16 +342,16 @@ public class ItemSpeedrunCommands {
                 )
                 .then(literal("view")
                         .executes(command(Permissions::getView, env -> s -> {
-                            final ServerPlayerEntity player = env.getPlayer(s);
-                            return ItemSpeedrunCommandHandle.viewCurrentRecord(s.getSource()::sendError, player);
+                            final ServerPlayer player = env.getPlayer(s);
+                            return ItemSpeedrunCommandHandle.viewCurrentRecord(s.getSource()::sendFailure, player);
                         }))
-                        .then(argument("player", EntityArgumentType.player())
+                        .then(argument("player", EntityArgument.player())
                                 .executes(command(a->0, env -> s -> {
-                                    final ServerPlayerEntity player = EntityArgumentType.getPlayer(s, "player");
-                                    final ServerCommandSource source = s.getSource();
+                                    final ServerPlayer player = EntityArgument.getPlayer(s, "player");
+                                    final CommandSourceStack source = s.getSource();
                                     // Check access
                                     int accessLevel;
-                                    final @Nullable ServerPlayerEntity maybeExecutor = s.getSource().getPlayer();
+                                    final @Nullable ServerPlayer maybeExecutor = s.getSource().getPlayer();
                                     if (player == maybeExecutor) {
                                         accessLevel = AlphabetSpeedrunConfigData.getInstance().getPermissions().getView();
                                     } else {
@@ -362,53 +362,53 @@ public class ItemSpeedrunCommands {
                                             accessLevel = AlphabetSpeedrunConfigData.getInstance().getPermissions().getViewOthers();
                                         }
                                     }
-                                    if (!s.getSource().hasPermissionLevel(accessLevel)) {
-                                        s.getSource().sendError(Text.translatable("command.speedrun.alphabet.no_permission"));
+                                    if (!s.getSource().hasPermission(accessLevel)) {
+                                        s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.no_permission"));
                                         return 0;
                                     }
-                                    return ItemSpeedrunCommandHandle.viewCurrentRecord(source::sendError, player);
+                                    return ItemSpeedrunCommandHandle.viewCurrentRecord(source::sendFailure, player);
                                 }))
                         )
                 )
                 .then(literal("archive")
                         .executes(command(Permissions::getArchive, env -> s -> {
-                            ServerPlayerEntity p = env.getPlayer(s);
+                            ServerPlayer p = env.getPlayer(s);
                             ConcurrentUtils.run(StoredItemRecords.archiveRecord(p, p::alphabetSpeedrun$getHistory), e -> {
                                 LOGGER.error("Failed to archive", e);
-                                s.getSource().sendError(Text.translatable("command.speedrun.alphabet.archive.interrupted"));
+                                s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.archive.interrupted"));
                             });
                             return 1;
                         }))
-                        .then(argument("players", EntityArgumentType.players())
+                        .then(argument("players", EntityArgument.players())
                                 .executes(command(Permissions::getArchiveOthers, env -> s -> {
-                                    Collection<ServerPlayerEntity> players = EntityArgumentType.getPlayers(s, "players");
+                                    Collection<ServerPlayer> players = EntityArgument.getPlayers(s, "players");
                                     ConcurrentUtils.run(CompletableFuture.allOf(players.stream().map(p -> StoredItemRecords.archiveRecord(
                                                     p, p::alphabetSpeedrun$getHistory))
                                             .toArray(CompletableFuture[]::new)), e -> {
                                         LOGGER.error("Failed to archive", e);
-                                        s.getSource().sendError(Text.translatable("command.speedrun.alphabet.archive.interrupted"));
+                                        s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.archive.interrupted"));
                                     });
                                     return 1;
                                 }))
                         )
                 )
                 .then(literal("delete")
-                        .then(argument("player", EntityArgumentType.player())
-                                .then(argument("record", UuidArgumentType.uuid())
+                        .then(argument("player", EntityArgument.player())
+                                .then(argument("record", UuidArgument.uuid())
                                         .executes(command(a -> 0, env -> s -> {
-                                            final ServerPlayerEntity player = EntityArgumentType.getPlayer(s, "player");
-                                            final ServerCommandSource source = s.getSource();
+                                            final ServerPlayer player = EntityArgument.getPlayer(s, "player");
+                                            final CommandSourceStack source = s.getSource();
                                             Permissions permissions = AlphabetSpeedrunConfigData.getInstance().getPermissions();
                                             IntSupplier sup = (player == source.getEntity()) ? permissions::getDelete : permissions::getDeleteOthers;
-                                            if (!source.hasPermissionLevel(sup.getAsInt())) {
-                                                source.sendError(Text.translatable("command.speedrun.alphabet.no_permission"));
+                                            if (!source.hasPermission(sup.getAsInt())) {
+                                                source.sendFailure(Component.translatable("command.speedrun.alphabet.no_permission"));
                                                 return 0;
                                             }
 
-                                            UUID record = UuidArgumentType.getUuid(s, "record");
+                                            UUID record = UuidArgument.getUuid(s, "record");
                                             ConcurrentUtils.run(StoredItemRecords.deleteRecord(player, record), e -> {
                                                 LOGGER.error("Failed to delete", e);
-                                                s.getSource().sendError(Text.translatable("command.speedrun.alphabet.delete.interrupted"));
+                                                s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.delete.interrupted"));
                                             });
                                             return 1;
                                         }))
@@ -417,27 +417,27 @@ public class ItemSpeedrunCommands {
                 )
                 .then(literal("list")
                         .executes(command(Permissions::getList, env -> s -> {
-                            ServerPlayerEntity p = env.getPlayer(s);
+                            ServerPlayer p = env.getPlayer(s);
                             ConcurrentUtils.run(StoredItemRecords.listRecords(p), e -> {
                                 LOGGER.error("Failed to delete", e);
-                                s.getSource().sendError(Text.translatable("command.speedrun.alphabet.list.interrupted"));
+                                s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.list.interrupted"));
                             });
                             return 1;
                         }))
-                        .then(argument("player", EntityArgumentType.player())
+                        .then(argument("player", EntityArgument.player())
                                 .executes(command(a -> 0, env -> s -> {
-                                    final ServerPlayerEntity player = EntityArgumentType.getPlayer(s, "player");
-                                    final ServerCommandSource source = s.getSource();
+                                    final ServerPlayer player = EntityArgument.getPlayer(s, "player");
+                                    final CommandSourceStack source = s.getSource();
                                     Permissions permissions = AlphabetSpeedrunConfigData.getInstance().getPermissions();
                                     IntSupplier sup = (player == source.getEntity() ? permissions::getList : permissions::getListOthers);
-                                    if (!source.hasPermissionLevel(sup.getAsInt())) {
-                                        source.sendError(Text.translatable("command.speedrun.alphabet.no_permission"));
+                                    if (!source.hasPermission(sup.getAsInt())) {
+                                        source.sendFailure(Component.translatable("command.speedrun.alphabet.no_permission"));
                                         return 0;
                                     }
 
                                     ConcurrentUtils.run(StoredItemRecords.listRecords(player), e -> {
                                         LOGGER.error("Failed to delete", e);
-                                        s.getSource().sendError(Text.translatable("command.speedrun.alphabet.list.interrupted"));
+                                        s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.list.interrupted"));
                                     });
                                     return 1;
                                 }))
@@ -448,8 +448,8 @@ public class ItemSpeedrunCommands {
         // Historical compatibility
         // Shit mountain, keep
         if (AlphabetSpeedrunConfigData.getInstance().isEnableLegacyCommands()) {
-            dispatcher.register(CommandManager.literal("speedabc")
-                    .then(CommandManager.argument("letter", StringArgumentType.word())
+            dispatcher.register(Commands.literal("speedabc")
+                    .then(Commands.argument("letter", StringArgumentType.word())
                             .suggests((context, builder) -> {
                                 for (char c = 'a'; c <= 'z'; c++)
                                     builder.suggest(String.valueOf(c));
@@ -460,31 +460,31 @@ public class ItemSpeedrunCommands {
                                 final String letter = StringArgumentType.getString(s, "letter");
                                 if (!letter.matches("^[a-tvwyz]$"))
                                     throw new CommandSyntaxException(CommandSyntaxException.BUILT_IN_EXCEPTIONS.literalIncorrect(),
-                                            Text.translatable("command.speedrun.alphabet.legacy.letter.expected", letter));
-                                final ServerPlayerEntity player = s.getSource().getPlayer();
+                                            Component.translatable("command.speedrun.alphabet.legacy.letter.expected", letter));
+                                final ServerPlayer player = s.getSource().getPlayer();
                                 if (player == null) {
-                                    s.getSource().sendError(Text.translatable("command.speedrun.alphabet.players_empty"));
+                                    s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.players_empty"));
                                     return 0;
                                 }
-                                final Identifier goal = Identifier.of("speedabc", letter);
-                                s.getSource().sendError(Text.translatable("command.speedrun.alphabet.outdated_warning",
+                                final ResourceLocation goal = ResourceLocation.fromNamespaceAndPath("speedabc", letter);
+                                s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.outdated_warning",
                                         "/itemspeedrun start speedabc:" + letter));
                                 return ItemSpeedrunCommandHandle.start(s.getSource(), goal, Collections.singleton(player));
                             })
                     )
             );
-            dispatcher.register(CommandManager.literal("hannumspeed")
-                    .then(CommandManager.argument("length", IntegerArgumentType.integer(1, 10))
+            dispatcher.register(Commands.literal("hannumspeed")
+                    .then(Commands.argument("length", IntegerArgumentType.integer(1, 10))
                             //.requires(ItemSpeedrunEvents::isOp)
                             .executes(s -> {
-                                final ServerPlayerEntity player = s.getSource().getPlayer();
+                                final ServerPlayer player = s.getSource().getPlayer();
                                 if (player == null) {
-                                    s.getSource().sendError(Text.translatable("command.speedrun.alphabet.players_empty"));
+                                    s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.players_empty"));
                                     return 0;
                                 }
                                 final String sLen = Integer.toString(IntegerArgumentType.getInteger(s, "length"));
-                                final Identifier goal = Identifier.of("hannumspeed", sLen);
-                                s.getSource().sendError(Text.translatable("command.speedrun.alphabet.outdated_warning",
+                                final ResourceLocation goal = ResourceLocation.fromNamespaceAndPath("hannumspeed", sLen);
+                                s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.outdated_warning",
                                         "/itemspeedrun start hannumspeed:" + sLen));
                                 return ItemSpeedrunCommandHandle.start(s.getSource(), goal, Collections.singleton(player));
                             })
@@ -493,24 +493,24 @@ public class ItemSpeedrunCommands {
         } else {
             // Legacy commands are disabled.
             // sending command.speedrun.alphabet.outdated_warning only.
-            dispatcher.register(CommandManager.literal("speedabc")
-                    .then(CommandManager.argument("letter", StringArgumentType.word())
+            dispatcher.register(Commands.literal("speedabc")
+                    .then(Commands.argument("letter", StringArgumentType.word())
                             .executes(s -> {
                                 final String letter = StringArgumentType.getString(s, "letter");
                                 if (!letter.matches("^[a-tvwyz]$"))
                                     throw new CommandSyntaxException(CommandSyntaxException.BUILT_IN_EXCEPTIONS.literalIncorrect(),
-                                            Text.translatable("command.speedrun.alphabet.legacy.letter.expected", letter));
-                                s.getSource().sendError(Text.translatable("command.speedrun.alphabet.outdated_warning",
+                                            Component.translatable("command.speedrun.alphabet.legacy.letter.expected", letter));
+                                s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.outdated_warning",
                                         "/itemspeedrun start speedabc:" + letter));
                                 return 0;
                             })
                     )
             );
-            dispatcher.register(CommandManager.literal("hannumspeed")
-                    .then(CommandManager.argument("length", IntegerArgumentType.integer(1, 10))
+            dispatcher.register(Commands.literal("hannumspeed")
+                    .then(Commands.argument("length", IntegerArgumentType.integer(1, 10))
                             .executes(s -> {
                                 final int len = (IntegerArgumentType.getInteger(s, "length"));
-                                s.getSource().sendError(Text.translatable("command.speedrun.alphabet.outdated_warning",
+                                s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.outdated_warning",
                                         "/itemspeedrun start hannumspeed:" + len));
                                 return 0;
                             })
@@ -519,7 +519,7 @@ public class ItemSpeedrunCommands {
         }
     }
 
-    private static Command<ServerCommandSource> startCmd(Collection<? extends ServerPlayerEntity> players, ItemSpeedrunDifficulty difficulty) {
+    private static Command<CommandSourceStack> startCmd(Collection<? extends ServerPlayer> players, ItemSpeedrunDifficulty difficulty) {
         return s -> {
             AlphabetSpeedrunConfigData instance = AlphabetSpeedrunConfigData.getInstance();
             Collection<ItemSpeedrunDifficulty> c = instance.getDifficultDifficulties();
@@ -527,20 +527,20 @@ public class ItemSpeedrunCommands {
             if (c.contains(difficulty))
                 sup = instance.getPermissions()::getDifficultStart;
             else sup = instance.getPermissions()::getNormalStart;
-            ServerCommandSource source = s.getSource();
-            if (!source.hasPermissionLevel(sup.getAsInt())) {
-                source.sendError(Text.translatable("command.speedrun.alphabet.no_permission"));
+            CommandSourceStack source = s.getSource();
+            if (!source.hasPermission(sup.getAsInt())) {
+                source.sendFailure(Component.translatable("command.speedrun.alphabet.no_permission"));
                 return 0;
             }
-            return ItemSpeedrunCommandHandle.start(source, IdentifierArgumentType.getIdentifier(s, "goal"), players, difficulty);
+            return ItemSpeedrunCommandHandle.start(source, ResourceLocationArgument.getId(s, "goal"), players, difficulty);
         };
     }
 
     static final class HelperEnv {
-        ServerPlayerEntity getPlayer(CommandContext<ServerCommandSource> s) throws PlayerNotFoundException {
-            final ServerPlayerEntity player = s.getSource().getPlayer();
+        ServerPlayer getPlayer(CommandContext<CommandSourceStack> s) throws PlayerNotFoundException {
+            final ServerPlayer player = s.getSource().getPlayer();
             if (player == null) {
-                s.getSource().sendError(Text.translatable("command.speedrun.alphabet.players_empty"));
+                s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.players_empty"));
                 throw new PlayerNotFoundException();
             }
             return player;

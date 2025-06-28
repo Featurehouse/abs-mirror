@@ -22,11 +22,11 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.mojang.serialization.*;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.advancement.AdvancementEntry;
-import net.minecraft.item.ItemStack;
-import net.minecraft.predicate.item.ItemPredicate;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.JsonHelper;
+import net.minecraft.advancements.AdvancementHolder;
+import net.minecraft.advancements.critereon.ItemPredicate;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.GsonHelper;
+import net.minecraft.world.item.ItemStack;
 
 public interface SingleSpeedrunPredicate {
     // TODO: make CODEC-alize
@@ -34,7 +34,7 @@ public interface SingleSpeedrunPredicate {
         return false;
     }
 
-    default boolean fitsAdvancementGet(AdvancementEntry advancement) {
+    default boolean fitsAdvancementGet(AdvancementHolder advancement) {
         return false;
     }
 
@@ -57,7 +57,7 @@ public interface SingleSpeedrunPredicate {
                 ));
                 case "advancement" -> DataResult.success(RecordCodecBuilder.<OfAdvancement>mapCodec(
                         instance -> instance.group(
-                                Identifier.CODEC.fieldOf("advancement_id").forGetter(OfAdvancement::advancementId),
+                                ResourceLocation.CODEC.fieldOf("advancement_id").forGetter(OfAdvancement::advancementId),
                                 ItemStack.CODEC.fieldOf("icon").forGetter(OfAdvancement::icon)
                         ).apply(instance, OfAdvancement::new)
                 ));
@@ -66,14 +66,14 @@ public interface SingleSpeedrunPredicate {
     );
 
     static SingleSpeedrunPredicate deserialize(JsonObject obj) {
-        ItemStack icon = ItemStack.CODEC.parse(JsonOps.INSTANCE, JsonHelper.getObject(obj, "icon")).getOrThrow();
-        return switch (JsonHelper.getString(obj, "predicate_type")) {
+        ItemStack icon = ItemStack.CODEC.parse(JsonOps.INSTANCE, GsonHelper.getAsJsonObject(obj, "icon")).getOrThrow();
+        return switch (GsonHelper.getAsString(obj, "predicate_type")) {
             case "item" -> {
                 ItemPredicate itemPredicate = ItemPredicate.CODEC.parse(JsonOps.INSTANCE, obj.get("item_predicate")).getOrThrow(JsonParseException::new);
                 yield new OfItemPredicate(itemPredicate, icon);
             }
             case "advancement" -> {
-                Identifier advancementId = Identifier.of(JsonHelper.getString(obj, "advancement_id"));
+                ResourceLocation advancementId = ResourceLocation.parse(GsonHelper.getAsString(obj, "advancement_id"));
                 yield new OfAdvancement(advancementId, icon);
             }
             default -> throw new JsonParseException("Expecting predicate_type as item / advancement, got" + obj.get("predicate_type"));
@@ -106,9 +106,9 @@ public interface SingleSpeedrunPredicate {
         }
     }
 
-    record OfAdvancement(Identifier advancementId, ItemStack icon) implements SingleSpeedrunPredicate {
+    record OfAdvancement(ResourceLocation advancementId, ItemStack icon) implements SingleSpeedrunPredicate {
         @Override
-        public boolean fitsAdvancementGet(AdvancementEntry advancement) {
+        public boolean fitsAdvancementGet(AdvancementHolder advancement) {
             return advancement.id().equals(advancementId);
         }
 

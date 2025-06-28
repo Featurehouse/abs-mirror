@@ -18,8 +18,8 @@
 
 package org.featurehouse.mcmod.speedrun.alphabeta.mixin;
 
-import net.minecraft.item.FireworkRocketItem;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.FireworkRocketItem;
+import net.minecraft.world.item.ItemStack;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.components.FireworkElytraUtils;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -27,9 +27,9 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Mixin(FireworkRocketItem.class)
 public class FireworkRocketMixin {
-    @Redirect(method = {"useOnBlock", "use"}, at = @At(
+    @Redirect(method = {"useOn", "use"}, at = @At(
             value = "INVOKE",
-            target = "Lnet/minecraft/item/ItemStack;decrement(I)V"
+            target = "Lnet/minecraft/world/item/ItemStack;shrink(I)V"
     ))
     private void handleDecrement(ItemStack instance, int amount) {
         FireworkElytraUtils.handleFireworkDecrement(instance, amount);

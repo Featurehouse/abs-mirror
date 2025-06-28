@@ -23,10 +23,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.mojang.datafixers.util.Either;
 import com.mojang.datafixers.util.Unit;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.WorldSavePath;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.command.ItemSpeedrunCommandHandle;
 import org.jetbrains.annotations.Nullable;
 
@@ -42,6 +38,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.storage.LevelResource;
 
 public class StoredItemRecords {
     private static final Gson GSON = new Gson();
@@ -62,16 +62,16 @@ public class StoredItemRecords {
         }).thenCompose(either -> either.map(CompletableFuture::completedFuture, CompletableFuture::failedFuture));
     }
 
-    public static CompletableFuture<Void> resumeRecord(ServerPlayerEntity player, UUID recordUuid) {
-        return readRecord(getPath(rootPath(player), player.getUuid(), recordUuid))
+    public static CompletableFuture<Void> resumeRecord(ServerPlayer player, UUID recordUuid) {
+        return readRecord(getPath(rootPath(player), player.getUUID(), recordUuid))
                 .thenAcceptAsync(record -> {
                     if (record.isFinished()) {
-                        player.sendMessage(Text.translatable("command.speedrun.alphabet.resume.done", recordUuid).formatted(Formatting.RED));
+                        player.sendSystemMessage(Component.translatable("command.speedrun.alphabet.resume.done", recordUuid).withStyle(ChatFormatting.RED));
                     } else {
                         synchronized (player) {
                             final ItemRecordAccess old = player.alphabetSpeedrun$getItemRecordAccess();
                             if (old != null && old.isCoop()) {
-                                if (ItemSpeedrunCommandHandle.quit(t -> player.sendMessage(t.copy().formatted(Formatting.RED)), player, true) == 0) {
+                                if (ItemSpeedrunCommandHandle.quit(t -> player.sendSystemMessage(t.copy().withStyle(ChatFormatting.RED)), player, true) == 0) {
                                     return;
                                 }
                             } else {
@@ -79,7 +79,7 @@ public class StoredItemRecords {
                             }
                             player.alphabetSpeedrun$setItemRecordAccess(record);
                             //record.setLastQuitTime(-1);
-                            player.sendMessage(Text.translatable("command.speedrun.alphabet.resume",
+                            player.sendSystemMessage(Component.translatable("command.speedrun.alphabet.resume",
                                     record.goalId(), record.recordId()));
                             ItemSpeedrunEvents.START_RUNNING_EVENT.invoker().onStartRunning(player, record, ItemSpeedrunEvents.StartRunning.FROM_DISK);
                         }
@@ -88,16 +88,16 @@ public class StoredItemRecords {
     }
 
     // Record: the one in history
-    public static CompletableFuture<Void> archiveRecord(ServerPlayerEntity player, Supplier<ItemSpeedrunRecord> record0) {
+    public static CompletableFuture<Void> archiveRecord(ServerPlayer player, Supplier<ItemSpeedrunRecord> record0) {
         Supplier<ItemSpeedrunRecord> record = Suppliers.memoize(record0::get);
         return CompletableFuture.<Either<Unit, Throwable>>supplyAsync(() -> {
             if (record.get() == null) {
                 // TODO: change message receiver to command source
-                player.sendMessage(Text.translatable("command.speedrun.alphabet.archive.empty").formatted(Formatting.RED));
+                player.sendSystemMessage(Component.translatable("command.speedrun.alphabet.archive.empty").withStyle(ChatFormatting.RED));
                 return Either.left(Unit.INSTANCE);
             }
             final JsonObject json = record.get().toJson();
-            Path path = getPath(rootPath(player), player.getUuid(), record.get().recordId());
+            Path path = getPath(rootPath(player), player.getUUID(), record.get().recordId());
             try {
                 Files.createDirectories(path.getParent());
                 try (BufferedWriter bw = Files.newBufferedWriter(path)){
@@ -111,20 +111,20 @@ public class StoredItemRecords {
                 .thenAccept($ -> {
                     synchronized (player) {
                         player.alphabetSpeedrun$clearItemHistory();
-                        player.sendMessage(Text.translatable("command.speedrun.alphabet.archive",
+                        player.sendSystemMessage(Component.translatable("command.speedrun.alphabet.archive",
                                 record.get().goalId(), record.get().recordId()));
                     }
                 });
     }
 
-    public static CompletableFuture<Void> deleteRecord(ServerPlayerEntity player, UUID uuid) {
+    public static CompletableFuture<Void> deleteRecord(ServerPlayer player, UUID uuid) {
         return CompletableFuture.<Either<Unit, Throwable>>supplyAsync(() -> {
-            Path path = getPath(rootPath(player), player.getUuid(), uuid);
+            Path path = getPath(rootPath(player), player.getUUID(), uuid);
             try {
                 if (Files.deleteIfExists(path)) {
-                    player.sendMessage(Text.translatable("command.speedrun.alphabet.delete", uuid));
+                    player.sendSystemMessage(Component.translatable("command.speedrun.alphabet.delete", uuid));
                 } else {
-                    player.sendMessage(Text.translatable("command.speedrun.alphabet.delete.not_found", uuid));
+                    player.sendSystemMessage(Component.translatable("command.speedrun.alphabet.delete.not_found", uuid));
                 }
             } catch (IOException e) {
                 return Either.right(e);
@@ -133,23 +133,23 @@ public class StoredItemRecords {
         }).thenCompose(either -> either.map(CompletableFuture::completedFuture, CompletableFuture::failedFuture)).thenAccept($->{});
     }
 
-    public static CompletableFuture<Void> listRecords(ServerPlayerEntity player) {
+    public static CompletableFuture<Void> listRecords(ServerPlayer player) {
         return CompletableFuture.<Either<Unit, Throwable>>supplyAsync(() -> {
-            Path path = getPath(rootPath(player), player.getUuid(), null);
+            Path path = getPath(rootPath(player), player.getUUID(), null);
             if (Files.notExists(path)) {
-                player.sendMessage(Text.translatable("command.speedrun.alphabet.list.empty").formatted(Formatting.RED));
+                player.sendSystemMessage(Component.translatable("command.speedrun.alphabet.list.empty").withStyle(ChatFormatting.RED));
                 return Either.left(Unit.INSTANCE);
             }
             try (Stream<Path> paths = Files.list(path)) {
                 List<Path> strings = paths.filter(p -> FILENAME_PATTERN.asMatchPredicate().test(p.getFileName().toString()))
                         .toList();
-                player.sendMessage(Text.translatable("command.speedrun.alphabet.list.header", player.getDisplayName()));
+                player.sendSystemMessage(Component.translatable("command.speedrun.alphabet.list.header", player.getDisplayName()));
                 for (Path p : strings) {
                     JsonObject obj = GSON.fromJson(Files.newBufferedReader(p), JsonObject.class);
-                    RecordSnapshot record = RecordSnapshot.fromPvpRecordJson(obj, player.getServer().getOverworld().getTime());
-                    player.sendMessage(Text.literal(" * ").append(record.asText()));
+                    RecordSnapshot record = RecordSnapshot.fromPvpRecordJson(obj, player.getServer().overworld().getGameTime());
+                    player.sendSystemMessage(Component.literal(" * ").append(record.asText()));
                 }
-                player.sendMessage(Text.translatable("command.speedrun.alphabet.list.footer", strings.size()));
+                player.sendSystemMessage(Component.translatable("command.speedrun.alphabet.list.footer", strings.size()));
             } catch (IOException e) {
                 return Either.right(e);
             }
@@ -157,8 +157,8 @@ public class StoredItemRecords {
         }).thenCompose(either -> either.map(CompletableFuture::completedFuture, CompletableFuture::failedFuture)).thenAccept($->{});
     }
 
-    static Path rootPath(ServerPlayerEntity player) {
-        return player.getServer().getSavePath(WorldSavePath.ROOT);
+    static Path rootPath(ServerPlayer player) {
+        return player.getServer().getWorldPath(LevelResource.ROOT);
     }
     public static final Pattern FILENAME_PATTERN = Pattern.compile("^[0-9a-fA-F]{8}\\u002d[0-9a-fA-F]{4}\\u002d[0-9a-fA-F]{4}\\u002d[0-9a-fA-F]{4}\\u002d[0-9a-fA-F]{12}\\u002ejson$");
 }

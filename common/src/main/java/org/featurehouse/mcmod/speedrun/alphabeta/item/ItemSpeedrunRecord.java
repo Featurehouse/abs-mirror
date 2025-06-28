@@ -22,13 +22,6 @@ import com.google.common.collect.Maps;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.PlayerManager;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.JsonHelper;
-import net.minecraft.util.Util;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.command.Draft;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.command.ItemSpeedrunCommandHandle;
@@ -38,10 +31,17 @@ import org.featurehouse.mcmod.speedrun.alphabeta.util.MixinSensitive;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import net.minecraft.ChatFormatting;
+import net.minecraft.Util;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.PlayerList;
+import net.minecraft.util.GsonHelper;
+import net.minecraft.world.item.ItemStack;
 
 @MixinSensitive
 public final class ItemSpeedrunRecord implements ItemRecordAccess {
-    private final Identifier goalId;
+    private final ResourceLocation goalId;
     private final UUID recordId;
     private final List<SingleSpeedrunPredicate> predicates;
     private final long[] collected;
@@ -53,7 +53,7 @@ public final class ItemSpeedrunRecord implements ItemRecordAccess {
     private final Map<UUID, UUID> mates;
 
     public ItemSpeedrunRecord(
-            Identifier goalId,
+            ResourceLocation goalId,
             UUID recordId,
             List<SingleSpeedrunPredicate> predicates,
             long startTime,
@@ -70,7 +70,7 @@ public final class ItemSpeedrunRecord implements ItemRecordAccess {
     }
 
     ItemSpeedrunRecord(
-            Identifier goalId,
+            ResourceLocation goalId,
             UUID recordId,
             List<SingleSpeedrunPredicate> predicates,
             /*Mutable*/long[] collected,
@@ -156,35 +156,35 @@ public final class ItemSpeedrunRecord implements ItemRecordAccess {
     }
 
     public static ItemSpeedrunRecord fromJson(JsonElement element, boolean resetUuid) {
-        JsonObject root = JsonHelper.asObject(element, "root");
-        Identifier goalId = Identifier.of(JsonHelper.getString(root, "goal_id"));
-        UUID recordId = resetUuid ? UUID.randomUUID() : UUID.fromString(JsonHelper.getString(root, "record_id"));
+        JsonObject root = GsonHelper.convertToJsonObject(element, "root");
+        ResourceLocation goalId = ResourceLocation.parse(GsonHelper.getAsString(root, "goal_id"));
+        UUID recordId = resetUuid ? UUID.randomUUID() : UUID.fromString(GsonHelper.getAsString(root, "record_id"));
         JsonArray arr;
 
         List<SingleSpeedrunPredicate> itemPredicates;
-        arr = JsonHelper.getArray(root, "predicates");
+        arr = GsonHelper.getAsJsonArray(root, "predicates");
         itemPredicates = new ArrayList<>(arr.size());
-        arr.forEach(e -> itemPredicates.add(SingleSpeedrunPredicate.deserialize(JsonHelper.asObject(e, "predicate"))));
+        arr.forEach(e -> itemPredicates.add(SingleSpeedrunPredicate.deserialize(GsonHelper.convertToJsonObject(e, "predicate"))));
 
 
-        arr = JsonHelper.getArray(root, "collected");
+        arr = GsonHelper.getAsJsonArray(root, "collected");
         long[] collected = new long[arr.size()];
         for (int i = 0; i < arr.size(); i++)
-            collected[i] = (JsonHelper.asLong(arr.get(i), "collected[" + i + ']'));
+            collected[i] = (GsonHelper.convertToLong(arr.get(i), "collected[" + i + ']'));
         collected = Arrays.copyOf(collected, itemPredicates.size());
-        long startTime = JsonHelper.getLong(root, "start_time");
-        long finishTime = JsonHelper.getLong(root, "finish_time", -1);
-        long lastQuitTime = JsonHelper.getLong(root, "last_quit_time", -1);
-        long vacantTime = JsonHelper.getLong(root, "vacant_time", 0);
-        JsonObject obj = JsonHelper.getObject(root, "pvp_mates_v2", null);
+        long startTime = GsonHelper.getAsLong(root, "start_time");
+        long finishTime = GsonHelper.getAsLong(root, "finish_time", -1);
+        long lastQuitTime = GsonHelper.getAsLong(root, "last_quit_time", -1);
+        long vacantTime = GsonHelper.getAsLong(root, "vacant_time", 0);
+        JsonObject obj = GsonHelper.getAsJsonObject(root, "pvp_mates_v2", null);
         final Map<UUID, UUID> mates = Maps.newHashMap();
         if (obj != null) {
             obj.entrySet().forEach(e -> mates.put(UUID.fromString(e.getKey()),
-                    UUID.fromString(JsonHelper.asString(e.getValue(), "mate_record_uuid"))));
+                    UUID.fromString(GsonHelper.convertToString(e.getValue(), "mate_record_uuid"))));
             //obj.forEach(e -> mates.add(UUID.fromString(JsonHelper.asString(e, "uuid"))));
         }
 
-        ItemSpeedrunDifficulty difficulty1 = DefaultItemSpeedrunDifficulty.getDifficulty(Identifier.of(JsonHelper.getString(root, "difficulty", "speedabc:empty")));
+        ItemSpeedrunDifficulty difficulty1 = DefaultItemSpeedrunDifficulty.getDifficulty(ResourceLocation.parse(GsonHelper.getAsString(root, "difficulty", "speedabc:empty")));
         return new ItemSpeedrunRecord(goalId, recordId, itemPredicates, collected,
                 startTime, finishTime, lastQuitTime, vacantTime, difficulty1, mates);
     }
@@ -204,7 +204,7 @@ public final class ItemSpeedrunRecord implements ItemRecordAccess {
         return mates;
     }
 
-    public Identifier goalId() {
+    public ResourceLocation goalId() {
         return goalId;
     }
 
@@ -256,14 +256,14 @@ public final class ItemSpeedrunRecord implements ItemRecordAccess {
 
 
     @Override
-    public void onStart(ServerPlayerEntity player) {
+    public void onStart(ServerPlayer player) {
         player.alphabetSpeedrun$setItemRecordAccess(this);
         difficulty().onStart(player);
     }
 
     @Override
-    public Collection<ServerPlayerEntity> getMates(PlayerManager manager, ServerPlayerEntity self) {
-        List<ServerPlayerEntity> l = mates().keySet().stream()
+    public Collection<ServerPlayer> getMates(PlayerList manager, ServerPlayer self) {
+        List<ServerPlayer> l = mates().keySet().stream()
                 .map(manager::getPlayer)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
@@ -273,12 +273,12 @@ public final class ItemSpeedrunRecord implements ItemRecordAccess {
     }
 
     @Override
-    public void sudoJoin(UUID hostId, Collection<? extends ServerPlayerEntity> joint) {
+    public void sudoJoin(UUID hostId, Collection<? extends ServerPlayer> joint) {
         final Draft draft = asDraft();
-        for (ServerPlayerEntity player : joint) {
+        for (ServerPlayer player : joint) {
             MutableBoolean failed = new MutableBoolean();
             ItemSpeedrunCommandHandle.startFromDraft(t -> {
-                player.sendMessage(t.copy().formatted(Formatting.RED));
+                player.sendSystemMessage(t.copy().withStyle(ChatFormatting.RED));
                 failed.setTrue();
             }, player, draft);
             if (failed.isFalse()) {
@@ -287,7 +287,7 @@ public final class ItemSpeedrunRecord implements ItemRecordAccess {
                 final ItemSpeedrunRecord rec = (ItemSpeedrunRecord) acc;
                 final UUID that = rec.recordId();
                 // Trust each other
-                this.mates.put(player.getUuid(), that);
+                this.mates.put(player.getUUID(), that);
                 rec.mates.put(hostId, this.recordId());
             }
         }

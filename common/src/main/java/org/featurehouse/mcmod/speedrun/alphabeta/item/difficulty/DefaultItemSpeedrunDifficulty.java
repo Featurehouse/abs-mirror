@@ -18,15 +18,6 @@
 
 package org.featurehouse.mcmod.speedrun.alphabeta.item.difficulty;
 
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.HoverEvent;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
 import org.featurehouse.mcmod.speedrun.alphabeta.config.AlphabetSpeedrunConfigData;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.components.ABSItemDataComponents;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.components.FireworkElytraUtils;
@@ -42,6 +33,15 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 public enum DefaultItemSpeedrunDifficulty implements ItemSpeedrunDifficulty {
     NN("empty", GivenItemState.NONE, GivenItemState.NONE),
@@ -55,56 +55,56 @@ public enum DefaultItemSpeedrunDifficulty implements ItemSpeedrunDifficulty {
     UU("inf_elytra_inf_firework", GivenItemState.UNBREAKABLE, GivenItemState.UNBREAKABLE)
     ;
     private final GivenItemState elytraState, fireworkState;
-    private final Identifier id;
+    private final ResourceLocation id;
     private final String translationKey;
 
     DefaultItemSpeedrunDifficulty(String rawId, GivenItemState elytraState, GivenItemState fireworkState) {
         this.elytraState = elytraState;
         this.fireworkState = fireworkState;
-        id = Identifier.of("speedabc", rawId);
+        id = ResourceLocation.fromNamespaceAndPath("speedabc", rawId);
         translationKey = "speedrun.alphabet.item.difficulty.speedabc." + rawId;
     }
 
-    private static final Map<Identifier, ItemSpeedrunDifficulty> ID_TO_OBJ =
+    private static final Map<ResourceLocation, ItemSpeedrunDifficulty> ID_TO_OBJ =
             Arrays.stream(values()).collect(Collectors.toMap(DefaultItemSpeedrunDifficulty::getId, Function.identity()));
 
     @ApiStatus.Internal
-    public static Map<Identifier, ItemSpeedrunDifficulty> getIdToObjMap() { return Collections.unmodifiableMap(ID_TO_OBJ); }
+    public static Map<ResourceLocation, ItemSpeedrunDifficulty> getIdToObjMap() { return Collections.unmodifiableMap(ID_TO_OBJ); }
 
     @NotNull
-    public static ItemSpeedrunDifficulty getDifficulty(Identifier id) { return ID_TO_OBJ.getOrDefault(id, NN); }
+    public static ItemSpeedrunDifficulty getDifficulty(ResourceLocation id) { return ID_TO_OBJ.getOrDefault(id, NN); }
 
     @ApiStatus.Internal
-    public static void registerDifficulty(Identifier id, @NotNull ItemSpeedrunDifficulty difficulty) {
+    public static void registerDifficulty(ResourceLocation id, @NotNull ItemSpeedrunDifficulty difficulty) {
         ID_TO_OBJ.put(id, Objects.requireNonNull(difficulty));
     }
 
     @Override
-    public void onStart(ServerPlayerEntity player) {
+    public void onStart(ServerPlayer player) {
         ItemStack stack1 = elytraState.createItemStack(Items.ELYTRA, 1);
         final ItemRecordAccess record = player.alphabetSpeedrun$getItemRecordAccess();
         // Detect if the player already has the Elytra that suits the difficulty
-        if (stack1 != null && !player.getInventory().containsAny(itemStack -> {
-            if (!itemStack.isOf(Items.ELYTRA)) return false;
+        if (stack1 != null && !player.getInventory().hasAnyMatching(itemStack -> {
+            if (!itemStack.is(Items.ELYTRA)) return false;
             if (AlphabetSpeedrunConfigData.getInstance().isItemsOnlyAvailableWhenRunning() &&
                     !FireworkElytraUtils.stampsRecord(itemStack, record))
                 return false;
             if (FireworkElytraUtils.bypassesItemCheck(itemStack)) {
                 if (elytraState == GivenItemState.COMMON) return true;
-                return itemStack.get(DataComponentTypes.UNBREAKABLE) != null;
+                return itemStack.get(DataComponents.UNBREAKABLE) != null;
             }
             return false;
         })) {   // The player does not have the Elytra that suits the difficulty
             if (record != null)
                 FireworkElytraUtils.putRecordStamp(stack1, record);
-            if (!player.giveItemStack(stack1)) {
-                player.dropItem(stack1, true);
+            if (!player.addItem(stack1)) {
+                player.drop(stack1, true);
             }
         }
         stack1 = fireworkState.createItemStack(Items.FIREWORK_ROCKET, 64);
         // Detect if the player already has the Firework Rocket that suits the difficulty
-        if (stack1 != null && !player.getInventory().containsAny(itemStack -> {
-            if (!itemStack.isOf(Items.FIREWORK_ROCKET)) return false;
+        if (stack1 != null && !player.getInventory().hasAnyMatching(itemStack -> {
+            if (!itemStack.is(Items.FIREWORK_ROCKET)) return false;
             if (AlphabetSpeedrunConfigData.getInstance().isItemsOnlyAvailableWhenRunning() &&
                     !FireworkElytraUtils.stampsRecord(itemStack, record))
                 return false;
@@ -116,20 +116,20 @@ public enum DefaultItemSpeedrunDifficulty implements ItemSpeedrunDifficulty {
         })) {   // // The player does not have the Elytra that suits the difficulty
             if (record != null)
                 FireworkElytraUtils.putRecordStamp(stack1, record);
-            if (!player.giveItemStack(stack1)) {
-                player.dropItem(stack1, true);
+            if (!player.addItem(stack1)) {
+                player.drop(stack1, true);
             }
         }
     }
 
-    public Identifier getId() {
+    public ResourceLocation getId() {
         return id;
     }
 
     @Override
-    public Text asText() {
-        return Text.translatable(translationKey)
-                .styled(s -> s.withHoverEvent(new HoverEvent.ShowText(Text.literal(id.toString()).formatted(Formatting.GRAY))));
+    public Component asText() {
+        return Component.translatable(translationKey)
+                .withStyle(s -> s.withHoverEvent(new HoverEvent.ShowText(Component.literal(id.toString()).withStyle(ChatFormatting.GRAY))));
     }
 
     private enum GivenItemState {

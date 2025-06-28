@@ -20,11 +20,6 @@ package org.featurehouse.mcmod.speedrun.alphabeta.item;
 
 import com.google.common.base.Preconditions;
 import com.google.gson.JsonObject;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.PlayerManager;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Util;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.coop.CoopRecord;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.coop.CoopRecordAccess;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.coop.CoopRecordManager;
@@ -41,6 +36,11 @@ import java.util.Locale;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import net.minecraft.Util;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.PlayerList;
+import net.minecraft.world.item.ItemStack;
 
 @MixinSensitive
 public interface ItemRecordAccess {
@@ -74,7 +74,7 @@ public interface ItemRecordAccess {
     int getCollectedCount();
     JsonObject toJson();
     long timeSince(long current);
-    Identifier goalId();
+    ResourceLocation goalId();
     UUID recordId();
     List<SingleSpeedrunPredicate> predicates();
     long[] collected();
@@ -94,20 +94,20 @@ public interface ItemRecordAccess {
     }
     default JsonObject toJsonMeta() { return toJson(); }
 
-    Collection<ServerPlayerEntity> getMates(PlayerManager manager, @Nullable ServerPlayerEntity self);
-    void onStart(ServerPlayerEntity player);
-    default void onStop(Collection<? extends ServerPlayerEntity> players) {}
+    Collection<ServerPlayer> getMates(PlayerList manager, @Nullable ServerPlayer self);
+    void onStart(ServerPlayer player);
+    default void onStop(Collection<? extends ServerPlayer> players) {}
 
     //@Deprecated
-    void sudoJoin(UUID hostId, Collection<? extends ServerPlayerEntity> players);
-    default boolean trusts(@Nullable ServerPlayerEntity player) {
+    void sudoJoin(UUID hostId, Collection<? extends ServerPlayer> players);
+    default boolean trusts(@Nullable ServerPlayer player) {
         if (player == null)
             return false;
         if (this.isCoop()) {
             return this.asCoop().isOp(player);
         } else {
             if (!(this instanceof ItemSpeedrunRecord record)) return false;
-            final @Nullable UUID expectedRecordId = record.mates().get(player.getUuid());
+            final @Nullable UUID expectedRecordId = record.mates().get(player.getUUID());
             if (Util.NIL_UUID.equals(expectedRecordId)) return true;    // always trust the player
             var recOther = player.alphabetSpeedrun$getItemRecordAccess();
             return recOther != null && recOther.recordId().equals(expectedRecordId);

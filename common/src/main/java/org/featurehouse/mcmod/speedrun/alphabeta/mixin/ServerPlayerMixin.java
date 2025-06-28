@@ -19,13 +19,13 @@
 package org.featurehouse.mcmod.speedrun.alphabeta.mixin;
 
 import com.google.gson.JsonObject;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.obfuscate.DontObfuscate;
-import net.minecraft.screen.ScreenHandler;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.storage.ReadView;
-import net.minecraft.storage.WriteView;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.*;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.coop.CoopRecordManager;
 import org.featurehouse.mcmod.speedrun.alphabeta.util.JsonYYDS;
@@ -37,8 +37,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(ServerPlayerEntity.class)
-public abstract class ServerPlayerMixin extends PlayerEntity implements ItemCollector, InternalItemCollector {
+@Mixin(ServerPlayer.class)
+public abstract class ServerPlayerMixin extends Player implements ItemCollector, InternalItemCollector {
     @Unique
     @DontObfuscate
     @Nullable
@@ -62,20 +62,20 @@ public abstract class ServerPlayerMixin extends PlayerEntity implements ItemColl
         alphabetSpeedrun$currentRecord = record;
     }
 
-    @Inject(method = "readCustomData", at = @At("RETURN"))
-    private void onReadFromNbt(ReadView view, CallbackInfo ci) {
+    @Inject(method = "readAdditionalSaveData", at = @At("RETURN"))
+    private void onReadFromNbt(ValueInput view, CallbackInfo ci) {
         try {
             this.alphabetSpeedrun$currentRecord = JsonYYDS.getFromReadView(view, "AlphabetSpeedrun_CurrentRecord")
                     .map(obj -> ItemRecordAccess.fromJsonMeta(obj, CoopRecordManager.fromServer(alphabetSpeedrun$getServer())))
                     .orElse(null);
         } catch (RuntimeException e) {
-            ItemSpeedrunEvents.LOGGER.error("Failed to read player custom data from {}", this.uuidString, e);
+            ItemSpeedrunEvents.LOGGER.error("Failed to read player custom data from {}", this.stringUUID, e);
         }
         this.alphabetSpeedrun$itemRecordHistory = JsonYYDS.getFromReadView(view, "AlphabetSpeedrun_HistoryRecord").orElse(null);
     }
 
-    @Inject(method = "writeCustomData", at = @At("RETURN"))
-    private void onWriteToNbt(WriteView view, CallbackInfo ci) {
+    @Inject(method = "addAdditionalSaveData", at = @At("RETURN"))
+    private void onWriteToNbt(ValueOutput view, CallbackInfo ci) {
         if (alphabetSpeedrun$currentRecord != null) {
             JsonYYDS.writeToWriteView(alphabetSpeedrun$currentRecord.toJsonMeta(), view, "AlphabetSpeedrun_CurrentRecord");
         }
@@ -111,14 +111,14 @@ public abstract class ServerPlayerMixin extends PlayerEntity implements ItemColl
                 ItemSpeedrunRecord.fromJson(alphabetSpeedrun$itemRecordHistory, false);
     }
 
-    @Inject(at = @At("RETURN"), method = "onScreenHandlerOpened")
+    @Inject(at = @At("RETURN"), method = "initMenu")
     @SuppressWarnings("all")
-    private void onOpenMenu(ScreenHandler screenHandler, CallbackInfo ci) {
-        screenHandler.addListener(new InventoryListener(((ServerPlayerEntity) (Object) this)));
+    private void onOpenMenu(AbstractContainerMenu screenHandler, CallbackInfo ci) {
+        screenHandler.addSlotListener(new InventoryListener(((ServerPlayer) (Object) this)));
     }
 
-    @Inject(method = "copyFrom", at = @At("RETURN"))
-    private void copyMyself(ServerPlayerEntity oldPlayer, boolean alive, CallbackInfo ci) {
+    @Inject(method = "restoreFrom", at = @At("RETURN"))
+    private void copyMyself(ServerPlayer oldPlayer, boolean alive, CallbackInfo ci) {
         this.alphabetSpeedrun$currentRecord = oldPlayer.alphabetSpeedrun$getItemRecordAccess();
         this.alphabetSpeedrun$itemRecordHistory = oldPlayer.alphabetSpeedrun$internal$getHistoryRaw();
     }

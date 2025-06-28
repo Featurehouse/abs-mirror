@@ -25,7 +25,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
 import dev.architectury.injectables.annotations.ExpectPlatform;
-import net.minecraft.util.JsonHelper;
 import org.jetbrains.annotations.ApiStatus;
 import org.slf4j.Logger;
 
@@ -34,6 +33,7 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
+import net.minecraft.util.GsonHelper;
 
 @ApiStatus.Internal
 public class BuiltinABSPackProvider {
@@ -56,9 +56,9 @@ public class BuiltinABSPackProvider {
         if (meta != null && Files.isRegularFile(meta)) {
             try (var r = GSON.newJsonReader(Files.newBufferedReader(meta))) {
                 final JsonObject o = GSON.fromJson(r, JsonObject.class);
-                final JsonArray packs = JsonHelper.getArray(o, "packs");
+                final JsonArray packs = GsonHelper.getAsJsonArray(o, "packs");
                 List<String> l = Lists.newArrayList();
-                packs.forEach(e -> l.add(JsonHelper.asString(e, "pack_name")));
+                packs.forEach(e -> l.add(GsonHelper.convertToString(e, "pack_name")));
                 LOGGER.info("ABS: loaded packs: {}", l);
                 return l;
             } catch (Exception e) {

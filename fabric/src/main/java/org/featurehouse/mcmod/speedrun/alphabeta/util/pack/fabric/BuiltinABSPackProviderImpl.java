@@ -23,7 +23,7 @@ import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.fabric.api.resource.ResourcePackActivationType;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import org.featurehouse.mcmod.speedrun.alphabeta.util.pack.BuiltinABSPackProvider;
 import org.jetbrains.annotations.ApiStatus;
 
@@ -43,7 +43,7 @@ public class BuiltinABSPackProviderImpl {
     public static void registerPacks() {
         for (String s : BuiltinABSPackProvider.SUB_PATHS.get()) {
             ResourceManagerHelper.registerBuiltinResourcePack(
-                    Identifier.of("alphabet_speedrun", s),
+                    ResourceLocation.fromNamespaceAndPath("alphabet_speedrun", s),
                     MOD.get(),
                     ResourcePackActivationType.DEFAULT_ENABLED);
         }

@@ -24,21 +24,21 @@ import dev.architectury.registry.client.keymappings.KeyMappingRegistry;
 import dev.architectury.registry.menu.MenuRegistry;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.KeyMapping;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.menu.ClientItemListScreen;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.menu.OpenItemListPayload;
 import org.lwjgl.glfw.GLFW;
 
 @Environment(EnvType.CLIENT)
 public class ClientItemSpeedrunEvents {
-    public static final KeyBinding VIEW_CURRENT_KEY = new KeyBinding("key.speedrun.alphabet.view",
-            GLFW.GLFW_KEY_B, KeyBinding.MISC_CATEGORY);
+    public static final KeyMapping VIEW_CURRENT_KEY = new KeyMapping("key.speedrun.alphabet.view",
+            GLFW.GLFW_KEY_B, KeyMapping.CATEGORY_MISC);
 
     public static void init() {
         MenuRegistry.registerScreenFactory(ItemSpeedrunEvents.MENU_TYPE_R.get(), ClientItemListScreen::new);
         KeyMappingRegistry.register(VIEW_CURRENT_KEY);
         ClientTickEvent.CLIENT_POST.register(client -> {
-            if (VIEW_CURRENT_KEY.wasPressed()) {
+            if (VIEW_CURRENT_KEY.consumeClick()) {
                 NetworkManager.sendToServer(new OpenItemListPayload());
             }
         });

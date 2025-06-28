@@ -18,27 +18,28 @@
 
 package org.featurehouse.mcmod.speedrun.alphabeta.item;
 
-import net.minecraft.item.ItemStack;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.ScreenHandlerListener;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerListener;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.NotNull;
 
-public final class InventoryListener implements ScreenHandlerListener {
-    private final ServerPlayerEntity serverPlayer;
+public final class InventoryListener implements ContainerListener {
+    private final ServerPlayer serverPlayer;
 
-    public InventoryListener(ServerPlayerEntity serverPlayer) {
+    public InventoryListener(ServerPlayer serverPlayer) {
         this.serverPlayer = serverPlayer;
     }
 
     @Override
-    public void onSlotUpdate(ScreenHandler handler, int slotId, ItemStack stack) {
+    public void slotChanged(AbstractContainerMenu handler, int slotId, @NotNull ItemStack stack) {
         Slot slot = handler.getSlot(slotId);
-        if (slot.inventory == serverPlayer.getInventory()) {
+        if (slot.container == serverPlayer.getInventory()) {
             ItemSpeedrunEvents.onItemPickup(serverPlayer, stack);
         }
     }
 
     @Override
-    public void onPropertyUpdate(ScreenHandler handler, int property, int value) {}
+    public void dataChanged(@NotNull AbstractContainerMenu handler, int property, int value) {}
 }

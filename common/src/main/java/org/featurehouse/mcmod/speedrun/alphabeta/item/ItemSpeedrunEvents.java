@@ -18,6 +18,7 @@
 
 package org.featurehouse.mcmod.speedrun.alphabeta.item;
 
+import com.mojang.blaze3d.Blaze3D;
 import com.mojang.datafixers.util.Either;
 import com.mojang.logging.LogUtils;
 import dev.architectury.event.Event;
@@ -35,20 +36,19 @@ import dev.architectury.registry.menu.MenuRegistry;
 import dev.architectury.registry.registries.DeferredRegister;
 import dev.architectury.registry.registries.RegistrySupplier;
 import dev.architectury.utils.Env;
-import net.minecraft.advancement.AdvancementEntry;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.util.GlfwUtil;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.resource.ResourceType;
-import net.minecraft.screen.ScreenHandlerType;
+import net.minecraft.ChatFormatting;
+import net.minecraft.advancements.AdvancementHolder;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.PlayerManager;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.server.players.PlayerList;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.item.ItemStack;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.featurehouse.mcmod.speedrun.alphabeta.config.AlphabetSpeedrunConfigData;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.command.DraftManager;
@@ -73,7 +73,7 @@ import java.util.stream.IntStream;
 public class ItemSpeedrunEvents {
     @FunctionalInterface
     public interface CollectedOne {
-        EventResult onCollect(Either<ItemStack, AdvancementEntry> obj, ItemStack icon, ServerPlayerEntity player, ItemRecordAccess record);
+        EventResult onCollect(Either<ItemStack, AdvancementHolder> obj, ItemStack icon, ServerPlayer player, ItemRecordAccess record);
     }
 
     public static final Event<CollectedOne> COLLECTED_ONE_EVENT = EventFactory.createEventResult();
@@ -83,19 +83,19 @@ public class ItemSpeedrunEvents {
         byte START_COOP = -101;
         byte JOIN_COOP = -102;
         byte START = -1, FROM_LOCAL = 0, FROM_DISK = 1;
-        void onStartRunning(ServerPlayerEntity player, ItemRecordAccess record, byte resumeFrom);
+        void onStartRunning(ServerPlayer player, ItemRecordAccess record, byte resumeFrom);
     }
     public static final Event<StartRunning> START_RUNNING_EVENT = EventFactory.createLoop();
 
     @FunctionalInterface
     public interface StopRunning {
-        void onStopRunning(ServerPlayerEntity player, ItemRecordAccess record);
+        void onStopRunning(ServerPlayer player, ItemRecordAccess record);
     }
     public static final Event<StopRunning> STOP_RUNNING_EVENT_PRE = EventFactory.createLoop();
 
     @FunctionalInterface
     public interface FinishRecord {
-        void onRecordFinish(ServerPlayerEntity player, ItemRecordAccess record, long gameTime);
+        void onRecordFinish(ServerPlayer player, ItemRecordAccess record, long gameTime);
     }
 
     public static final Event<FinishRecord> FINISH_RECORD_EVENT = EventFactory.createLoop();
@@ -103,10 +103,10 @@ public class ItemSpeedrunEvents {
     public static void init() {
         CommandRegistrationEvent.EVENT.register((dispatcher, registry, selection) -> ItemSpeedrunCommands.registerCommands(dispatcher));
         //PlayerEvent.PICKUP_ITEM_POST.register((player, itemEntity, stack) -> onItemPickup(player, stack));
-        ReloadListenerRegistry.register(ResourceType.SERVER_DATA, new ItemSpeedrun.DataLoader(), Identifier.of("alphabet_speedrun", "goals"));
+        ReloadListenerRegistry.register(PackType.SERVER_DATA, new ItemSpeedrun.DataLoader(), ResourceLocation.fromNamespaceAndPath("alphabet_speedrun", "goals"));
         START_RUNNING_EVENT.register((player, record, resumeFrom) -> {
             ItemSpeedrunCommandHandle.tryResumeInventory(player);
-            final long currentTime = player.getServer().getOverworld().getTime();
+            final long currentTime = player.getServer().overworld().getGameTime();
             ItemSpeedrunEvents.tryFinishRecord(record, currentTime, player);
             if (AlphabetSpeedrunConfigData.getInstance().isItemsOnlyAvailableWhenRunning()) {
                 if (resumeFrom >= 0 /*resume, not start*/ && record.difficulty() instanceof DefaultItemSpeedrunDifficulty) {
@@ -124,29 +124,29 @@ public class ItemSpeedrunEvents {
         });
         NetworkManager.registerReceiver(NetworkManager.c2s(), OpenItemListPayload.ID, OpenItemListPayload.PACKET_CODEC, (payload, context) -> context.queue(() ->
                 ItemSpeedrunCommandHandle.viewCurrentRecord(
-                        text -> context.getPlayer().sendMessage(text.copy().formatted(Formatting.RED), false),
-                        ((ServerPlayerEntity) context.getPlayer())
+                        text -> context.getPlayer().displayClientMessage(text.copy().withStyle(ChatFormatting.RED), false),
+                        ((ServerPlayer) context.getPlayer())
                 )));
 
         // Register ItemOnlyAvailableWhenRunning events
         TickEvent.PLAYER_POST.register(player -> {
-            if (player.getWorld().isClient()) return;
+            if (player.level().isClientSide()) return;
             if (AlphabetSpeedrunConfigData.getInstance().isItemsOnlyAvailableWhenRunning()) {
                 boolean dirty = false;
-                final ServerPlayerEntity serverPlayer = (ServerPlayerEntity) player;
-                final PlayerInventory inv = player.getInventory();
-                for (int i = inv.size(); i >= 0; i--) {
-                    final ItemStack stack = inv.getStack(i);
+                final ServerPlayer serverPlayer = (ServerPlayer) player;
+                final Inventory inv = player.getInventory();
+                for (int i = inv.getContainerSize(); i >= 0; i--) {
+                    final ItemStack stack = inv.getItem(i);
                     // Item should be discarded either:
                     // i. Running {abc}, while something is {def};
                     // ii. Not running, while something is {abc}.
                     if (FireworkElytraUtils.stampsRecord(stack, serverPlayer.alphabetSpeedrun$getItemRecordAccess()))
                         return;
-                    inv.removeStack(i);
+                    inv.removeItemNoUpdate(i);
                     dirty = true;
                 }
                 if (dirty)
-                    inv.markDirty();
+                    inv.setChanged();
             }
         });
 
@@ -168,7 +168,7 @@ public class ItemSpeedrunEvents {
         // Register TimerPausesWhenVacant events
         STOP_RUNNING_EVENT_PRE.register((player, record) -> {
             if (!record.isCoop() && AlphabetSpeedrunConfigData.getInstance().isTimerPausesWhenVacant()) {
-                record.setLastQuitTime(player.getServer().getOverworld().getTime());
+                record.setLastQuitTime(player.getServer().overworld().getGameTime());
             }
         });
 
@@ -180,8 +180,8 @@ public class ItemSpeedrunEvents {
                     SingleSpeedrunPredicate predicate = predicates.get(i);
                     if (predicate.fitsAdvancementGet(advancement)) {
                         if (!COLLECTED_ONE_EVENT.invoker().onCollect(Either.right(advancement), predicate.icon(), player, rec).isFalse()) {
-                            long time = player.getServer().getOverworld().getTime();
-                            PlayerManager playerManager = player.getServer().getPlayerManager();
+                            long time = player.getServer().overworld().getGameTime();
+                            PlayerList playerManager = player.getServer().getPlayerList();
                             setAndAnnounceCollectedOne(player, rec, predicate.icon(), null, i, time, playerManager);
                         }
                     }
@@ -198,14 +198,14 @@ public class ItemSpeedrunEvents {
 
         FINISH_RECORD_EVENT.register((player, record, gameTime) -> {
             // TODO change broadcast to partial (players not involved will not receive broadcasts)
-            var mgr = player.getServer().getPlayerManager();
-            mgr.broadcast(ItemRecordMessages.itemCompleted(player, record, gameTime), false);
+            var mgr = player.getServer().getPlayerList();
+            mgr.broadcastSystemMessage(ItemRecordMessages.itemCompleted(player, record, gameTime), false);
             if (!record.isCoop()) {
                 player.alphabetSpeedrun$moveRecordToHistory();
                 ItemRecordMessages.sendWinSound(player, mgr);
             }
             else {
-                Collection<? extends ServerPlayerEntity> players;
+                Collection<? extends ServerPlayer> players;
                 players = record.asCoop().getPlayers().stream()
                         .map(mgr::getPlayer)
                         .filter(Objects::nonNull)
@@ -232,26 +232,26 @@ public class ItemSpeedrunEvents {
             }
 
             ClientGuiEvent.RENDER_HUD.register((drawContext, tickDelta) ->
-                    drawContext.drawText(MinecraftClient.getInstance().textRenderer, Text.translatable("demo.speedrun.alphabet"), 10, 10, 0xfffff, true));
+                    drawContext.drawString(Minecraft.getInstance().font, Component.translatable("demo.speedrun.alphabet"), 10, 10, 0xfffff, true));
             TickEvent.SERVER_POST.register(server -> {
-                var t = server.getOverworld().getTime();
+                var t = server.overworld().getGameTime();
                 if (t >= 5400) {
                     if (t > 6000) {
-                        GlfwUtil.makeJvmCrash();
+                        Blaze3D.youJustLostTheGame();
                     } else if (t % 20 == 0) {
-                        MinecraftClient.getInstance().getMessageHandler().onGameMessage(Text.translatable("demo.speedrun.alphabet.cd", (6000 - t) / 20), false);
+                        Minecraft.getInstance().getChatListener().handleSystemMessage(Component.translatable("demo.speedrun.alphabet.cd", (6000 - t) / 20), false);
                     }
                 }
             });
             ClientPlayerEvent.CLIENT_PLAYER_JOIN.register(player -> {
-                if (!MinecraftClient.getInstance().isConnectedToLocalServer()) {
-                    player.networkHandler.getConnection().disconnect(Text.translatable("demo.speedrun.alphabet.mp"));
+                if (!Minecraft.getInstance().isSingleplayer()) {
+                    player.connection.getConnection().disconnect(Component.translatable("demo.speedrun.alphabet.mp"));
                 }
             });
         }
     }
 
-    public static void onItemPickup(ServerPlayerEntity player, ItemStack stack) {
+    public static void onItemPickup(ServerPlayer player, ItemStack stack) {
         if (stack.isEmpty()) return;
         final MinecraftServer server = player.getServer();
         Objects.requireNonNull(server);
@@ -266,8 +266,8 @@ public class ItemSpeedrunEvents {
                 SingleSpeedrunPredicate requirement = predicates.get(i);
                 if (requirement.testItemStack(stack)) {
                     if (!COLLECTED_ONE_EVENT.invoker().onCollect(Either.left(stack), requirement.icon(), player, record).isFalse()) {
-                        final long time = server.getOverworld().getTime();
-                        final PlayerManager mgr = server.getPlayerManager();
+                        final long time = server.overworld().getGameTime();
+                        final PlayerList mgr = server.getPlayerList();
                         setAndAnnounceCollectedOne(player, record, requirement.icon(), stack, i, time, mgr);
                         tryFinishRecord(record, time, player);
                     }
@@ -276,17 +276,17 @@ public class ItemSpeedrunEvents {
         }
     }
 
-    static void setAndAnnounceCollectedOne(ServerPlayerEntity player, ItemRecordAccess record,
+    static void setAndAnnounceCollectedOne(ServerPlayer player, ItemRecordAccess record,
                                                   ItemStack displayedStack,
                                                   @Nullable ItemStack actualStack,
                                                   int index,
-                                                  long time, PlayerManager mgr) {
+                                                  long time, PlayerList mgr) {
         record.setRequirementPassedTime(index, time);
-        mgr.broadcast(ItemRecordMessages.itemCollected(player, displayedStack, record, time, actualStack), false);
-        ItemRecordMessages.sendSound(mgr, SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP);
+        mgr.broadcastSystemMessage(ItemRecordMessages.itemCollected(player, displayedStack, record, time, actualStack), false);
+        ItemRecordMessages.sendSound(mgr, SoundEvents.EXPERIENCE_ORB_PICKUP);
     }
 
-    static void tryFinishRecord(ItemRecordAccess record, long time, ServerPlayerEntity player) {
+    static void tryFinishRecord(ItemRecordAccess record, long time, ServerPlayer player) {
         if (record.tryMarkDone(time)) {
             FINISH_RECORD_EVENT.invoker().onRecordFinish(player, record, time);
         }
@@ -294,12 +294,12 @@ public class ItemSpeedrunEvents {
 
     public static final Logger LOGGER = LogUtils.getLogger();
 
-    public static final DeferredRegister<ScreenHandlerType<?>> MENU_REG = DeferredRegister.create("alphabet_speedrun", MultiverseHooks.menuKey());
-    public static final RegistrySupplier<ScreenHandlerType<ItemListViewMenu>> MENU_TYPE_R = MENU_REG.register(
+    public static final DeferredRegister<MenuType<?>> MENU_REG = DeferredRegister.create("alphabet_speedrun", MultiverseHooks.menuKey());
+    public static final RegistrySupplier<MenuType<ItemListViewMenu>> MENU_TYPE_R = MENU_REG.register(
             "item_list",
             () -> MenuRegistry.ofExtended(
                     (id, $, buf) -> new ItemListViewMenu(
-                            id, buf.readVarInt(), buf.readUuid(),
+                            id, buf.readVarInt(), buf.readUUID(),
                             size -> IntStream.range(0, size).mapToObj($$ -> PacketUtil.readItemStack(buf)).collect(Collectors.toList()))
             )
     );

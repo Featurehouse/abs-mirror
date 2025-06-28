@@ -18,7 +18,6 @@
 
 package org.featurehouse.mcmod.speedrun.alphabeta.config;
 
-import net.minecraft.util.Identifier;
 import org.featurehouse.mcmod.speedrun.alphabeta.AlphabetSpeedrunMod;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.difficulty.ItemSpeedrunDifficulty;
 import org.featurehouse.mcmod.speedrun.alphabeta.util.qj5.JsonWriter;
@@ -28,21 +27,22 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
+import net.minecraft.resources.ResourceLocation;
 
 public interface ItemRunDifficultyRuleFactory {
-    Collection<ItemSpeedrunDifficulty> findDifficultDifficulties(Map<Identifier, ItemSpeedrunDifficulty> map);
+    Collection<ItemSpeedrunDifficulty> findDifficultDifficulties(Map<ResourceLocation, ItemSpeedrunDifficulty> map);
 
-    List<Identifier> asIdList();
+    List<ResourceLocation> asIdList();
     boolean isInverted();
 
     class Impl implements ItemRunDifficultyRuleFactory {
-        private final Collection<Identifier> ids;
+        private final Collection<ResourceLocation> ids;
         private final boolean inverted;
 
         /**
          * @param ids matching ids. If null it means ALL, or technically, invert {@code inverted}.
          */
-        Impl(@Nullable Collection<Identifier> ids, boolean inverted) {
+        Impl(@Nullable Collection<ResourceLocation> ids, boolean inverted) {
             if (ids != null) {
                 this.ids = ids;
                 this.inverted = inverted;
@@ -53,8 +53,8 @@ public interface ItemRunDifficultyRuleFactory {
         }
 
         @Override
-        public List<Identifier> asIdList() {
-            return ids instanceof List ? (List<Identifier>) ids : ids.stream().sorted().toList();
+        public List<ResourceLocation> asIdList() {
+            return ids instanceof List ? (List<ResourceLocation>) ids : ids.stream().sorted().toList();
         }
 
         @Override
@@ -63,7 +63,7 @@ public interface ItemRunDifficultyRuleFactory {
         }
 
         @Override
-        public Collection<ItemSpeedrunDifficulty> findDifficultDifficulties(Map<Identifier, ItemSpeedrunDifficulty> map) {
+        public Collection<ItemSpeedrunDifficulty> findDifficultDifficulties(Map<ResourceLocation, ItemSpeedrunDifficulty> map) {
             if (referringToAll(this)) return map.values();
             if (!isInverted()) {
                 if (ids.isEmpty()) return Collections.emptySet();
@@ -80,13 +80,13 @@ public interface ItemRunDifficultyRuleFactory {
          *               caring what the key is.
          */
         static void serializeList(ItemRunDifficultyRuleFactory factory, JsonWriter writer) throws IOException {
-            List<Identifier> list = factory.asIdList();
+            List<ResourceLocation> list = factory.asIdList();
             switch (list.size()) {
                 case 0 -> writer.value("NONE");
                 case 1 -> writer.value(list.getFirst().toString());
                 default -> {
                     writer.beginArray();
-                    for (Identifier id : list)
+                    for (ResourceLocation id : list)
                         writer.value(id.toString());
                     writer.endArray();
                 }

@@ -18,7 +18,7 @@
 
 package org.featurehouse.mcmod.speedrun.alphabeta.item.menu;
 
-public abstract sealed class ItemListMenuSync implements net.minecraft.screen.PropertyDelegate {
+public abstract sealed class ItemListMenuSync implements net.minecraft.world.inventory.ContainerData {
     protected final int listSize;
 
     protected ItemListMenuSync(int listSize) {
@@ -26,7 +26,7 @@ public abstract sealed class ItemListMenuSync implements net.minecraft.screen.Pr
     }
 
     @Override
-    public int size() {
+    public int getCount() {
         return arrSize(listSize);
     }
 

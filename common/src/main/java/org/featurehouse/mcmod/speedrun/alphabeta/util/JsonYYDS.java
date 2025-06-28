@@ -24,13 +24,13 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
-import net.minecraft.resource.Resource;
-import net.minecraft.resource.ResourceFinder;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.storage.ReadView;
-import net.minecraft.storage.WriteView;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.FileToIdConverter;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.StrictJsonParser;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.slf4j.Logger;
 
 import java.io.*;
@@ -51,27 +51,27 @@ public final class JsonYYDS {
         } catch (IOException impossible) { throw new IncompatibleClassChangeError(); }
     }
 
-    public static Optional<JsonObject> getFromReadView(ReadView view, String key) {
+    public static Optional<JsonObject> getFromReadView(ValueInput view, String key) {
         return view.read(key, Codec.BYTE_BUFFER).map(ByteBuffer::array).map(JsonYYDS::fromByteArray);
     }
 
-    public static void writeToWriteView(JsonObject obj, WriteView view, String key) {
+    public static void writeToWriteView(JsonObject obj, ValueOutput view, String key) {
         var buffer = new ByteArrayOutputStream();
         try (var writer = new OutputStreamWriter(new GZIPOutputStream(buffer))) {
             GSON.toJson(obj, writer);
         } catch (IOException e) { throw new IncompatibleClassChangeError(); }
-        view.put(key, Codec.BYTE_BUFFER, ByteBuffer.wrap(buffer.toByteArray()));
+        view.store(key, Codec.BYTE_BUFFER, ByteBuffer.wrap(buffer.toByteArray()));
     }
 
-    public static Map<Identifier, JsonElement> loadJsonResources(ResourceManager manager, ResourceFinder finder) {
-        Map<Identifier, JsonElement> map = new LinkedHashMap<>();
+    public static Map<ResourceLocation, JsonElement> loadJsonResources(ResourceManager manager, FileToIdConverter finder) {
+        Map<ResourceLocation, JsonElement> map = new LinkedHashMap<>();
 
-        for (Map.Entry<Identifier, Resource> entry : finder.findResources(manager).entrySet()) {
-            Identifier id = entry.getKey();
-            Identifier key = finder.toResourceId(id);
+        for (Map.Entry<ResourceLocation, Resource> entry : finder.listMatchingResources(manager).entrySet()) {
+            ResourceLocation id = entry.getKey();
+            ResourceLocation key = finder.fileToId(id);
             Resource resource = entry.getValue();
 
-            try (Reader reader = resource.getReader()) {
+            try (Reader reader = resource.openAsReader()) {
                 if (map.putIfAbsent(key, StrictJsonParser.parse(reader)) != null)
                     throw new IllegalStateException("Duplicate data file ignored with ID " + key);
             } catch (IllegalArgumentException | IOException | JsonParseException e) {

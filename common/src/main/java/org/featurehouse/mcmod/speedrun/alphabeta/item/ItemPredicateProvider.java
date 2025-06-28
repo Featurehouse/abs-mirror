@@ -23,30 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.gson.*;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.JsonOps;
-import net.minecraft.advancement.AdvancementEntry;
-import net.minecraft.component.ComponentChanges;
-import net.minecraft.component.ComponentMap;
-import net.minecraft.component.ComponentType;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.ItemEnchantmentsComponent;
-import net.minecraft.component.type.LoreComponent;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.predicate.NumberRange;
-import net.minecraft.predicate.component.ComponentPredicate;
-import net.minecraft.predicate.component.ComponentPredicateTypes;
-import net.minecraft.predicate.component.ComponentsPredicate;
-import net.minecraft.predicate.item.DamagePredicate;
-import net.minecraft.predicate.item.ItemPredicate;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.registry.entry.RegistryEntryList;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.JsonHelper;
 import org.featurehouse.mcmod.speedrun.alphabeta.mixin.EnchantmentsPredicateAccessor;
 import org.featurehouse.mcmod.speedrun.alphabeta.util.hooks.MultiverseHooks;
 import org.jetbrains.annotations.Contract;
@@ -58,13 +34,37 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import net.minecraft.advancements.AdvancementHolder;
+import net.minecraft.advancements.critereon.DataComponentMatchers;
+import net.minecraft.advancements.critereon.ItemPredicate;
+import net.minecraft.advancements.critereon.MinMaxBounds;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderSet;
+import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.core.component.DataComponentPatch;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.component.predicates.DamagePredicate;
+import net.minecraft.core.component.predicates.DataComponentPredicate;
+import net.minecraft.core.component.predicates.DataComponentPredicates;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
+import net.minecraft.util.GsonHelper;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.ItemLore;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 
 public sealed interface ItemPredicateProvider {
     // NOTE: the ItemStack should contain simple notation as tooltips
     Stream<SingleSpeedrunPredicate> flatMaps();
 
     static List<ItemPredicateProvider> fromJson(JsonElement element) {
-        JsonArray arr = JsonHelper.asArray(element, "item_ctx");
+        JsonArray arr = GsonHelper.convertToJsonArray(element, "item_ctx");
         ImmutableList.Builder<ItemPredicateProvider> builder = ImmutableList.builder();
         for (JsonElement e : arr) {
             builder.add(fromSingle(e, true));
@@ -73,50 +73,50 @@ public sealed interface ItemPredicateProvider {
     }
 
     private static ItemPredicateProvider fromSingle(JsonElement element, boolean checkIcon) throws IllegalArgumentException {
-        if (JsonHelper.isString(element)) {
+        if (GsonHelper.isStringValue(element)) {
             return fromSingleString(element);
         } else if (element.isJsonObject()) {
             // items: [], item_predicate: []
             // tag: "", item_predicate: [], all: true
             JsonObject obj = element.getAsJsonObject();
 
-            if (checkIcon && JsonHelper.hasJsonObject(obj, "icon")) {
+            if (checkIcon && GsonHelper.isObjectNode(obj, "icon")) {
                 final JsonObject icon0 = obj.getAsJsonObject("icon");
-                Impl.IconState iconState = Impl.IconState.getIconState(JsonHelper.getString(obj, "replace", null));
+                Impl.IconState iconState = Impl.IconState.getIconState(GsonHelper.getAsString(obj, "replace", null));
                 final ItemStack itemStack = ItemSpeedrun.DataLoader.iconFromJson(icon0);
                 return new Impl.WithExplicitIcon(iconState, itemStack, fromSingle(obj, false));
             }
 
             if (obj.has("advancement")) {
-                Identifier id = Identifier.of(JsonHelper.getString(obj, "advancement"));
+                ResourceLocation id = ResourceLocation.parse(GsonHelper.getAsString(obj, "advancement"));
                 return new Impl.OfAdvancement(id);
             }
 
-            if (JsonHelper.hasArray(obj, "items")) {
-                if (JsonHelper.hasString(obj, "tag"))
+            if (GsonHelper.isArrayNode(obj, "items")) {
+                if (GsonHelper.isStringValue(obj, "tag"))
                     throw new IllegalArgumentException("Item & tag cannot exist at the same time");
 
                 JsonArray items = obj.getAsJsonArray("items");
-                List<RegistryEntry<Item>> itemList = new ArrayList<>();
+                List<Holder<Item>> itemList = new ArrayList<>();
                 for (JsonElement item : items) {
-                    itemList.add(JsonHelper.asItem(item, "item"));
+                    itemList.add(GsonHelper.convertToItem(item, "item"));
                 }
 
-                JsonObject predicate = JsonHelper.getObject(obj, "item_predicate", null);
+                JsonObject predicate = GsonHelper.getAsJsonObject(obj, "item_predicate", null);
                 if (predicate == null)
-                    return new Impl.SimpleItem(RegistryEntryList.of(itemList));
+                    return new Impl.SimpleItem(HolderSet.direct(itemList));
 
                 ItemStack stack = itemList.isEmpty() ? Impl.anythingMarker() : new ItemStack(itemList.getFirst());
 
                 ItemPredicate itemPredicate = Impl.parseItemPredicate(predicate);
-                Impl.fillExtraRequirements(stack, Either.right(RegistryEntryList.of(itemList)), itemPredicate);
+                Impl.fillExtraRequirements(stack, Either.right(HolderSet.direct(itemList)), itemPredicate);
 
                 return new Impl.CommonPredicate(itemPredicate, stack);
-            } else if (JsonHelper.hasString(obj, "tag")) {
-                String tag = JsonHelper.getString(obj, "tag");
-                TagKey<Item> tagKey = TagKey.of(MultiverseHooks.itemKey(), Identifier.of(tag));
-                @Nullable JsonObject predicate = JsonHelper.getObject(obj, "item_predicate", null);
-                if (JsonHelper.getBoolean(obj, "all", true)) {
+            } else if (GsonHelper.isStringValue(obj, "tag")) {
+                String tag = GsonHelper.getAsString(obj, "tag");
+                TagKey<Item> tagKey = TagKey.create(MultiverseHooks.itemKey(), ResourceLocation.parse(tag));
+                @Nullable JsonObject predicate = GsonHelper.getAsJsonObject(obj, "item_predicate", null);
+                if (GsonHelper.getAsBoolean(obj, "all", true)) {
                     if (predicate == null) return new Impl.EverythingInTag(tagKey);
                     return new Impl.ComplexAllInTag(tagKey, Impl.parseItemPredicate(predicate));
                 } else {
@@ -126,16 +126,16 @@ public sealed interface ItemPredicateProvider {
                     ItemPredicate itemPredicate = Impl.parseItemPredicate(predicate);
 
                     Impl.fillExtraRequirements(marker, Either.left(tagKey), itemPredicate);
-                    itemPredicate = ItemPredicate.Builder.create()
-                            .tag(Registries.ITEM, tagKey)
-                            .count(itemPredicate.count())
-                            .components(itemPredicate.components())
+                    itemPredicate = ItemPredicate.Builder.item()
+                            .of(BuiltInRegistries.ITEM, tagKey)
+                            .withCount(itemPredicate.count())
+                            .withComponents(itemPredicate.components())
                             .build();
 
                     return new Impl.CommonPredicate(itemPredicate, marker);
                 }
             } else {
-                JsonObject predicate = JsonHelper.getObject(obj, "item_predicate", null);
+                JsonObject predicate = GsonHelper.getAsJsonObject(obj, "item_predicate", null);
                 if (predicate == null) return Impl.Any.INSTANCE;
 
                 ItemStack stack = Impl.anythingMarker();
@@ -149,10 +149,10 @@ public sealed interface ItemPredicateProvider {
     private static ItemPredicateProvider fromSingleString(JsonElement element) {
         String s = element.getAsString();
         if (s.startsWith("#")) {
-            TagKey<Item> tagKey = TagKey.of(MultiverseHooks.itemKey(), Identifier.of(s.substring(1)));
+            TagKey<Item> tagKey = TagKey.create(MultiverseHooks.itemKey(), ResourceLocation.parse(s.substring(1)));
             return new Impl.EverythingInTag(tagKey);
         } else {
-            RegistryEntry<Item> item = JsonHelper.asItem(element, "element");
+            Holder<Item> item = GsonHelper.convertToItem(element, "element");
             return new Impl.SimpleItem(item);
         }
     }
@@ -164,17 +164,17 @@ public sealed interface ItemPredicateProvider {
         }
 
         @SafeVarargs
-        private static ItemPredicate itemPredicate(RegistryEntry<Item>... items) {
-            return itemPredicate(RegistryEntryList.of(items));
+        private static ItemPredicate itemPredicate(Holder<Item>... items) {
+            return itemPredicate(HolderSet.direct(items));
         }
 
-        private static ItemPredicate itemPredicate(RegistryEntryList<Item> items) {
-            return new ItemPredicate(Optional.of(items), NumberRange.IntRange.ANY, ComponentsPredicate.EMPTY);
+        private static ItemPredicate itemPredicate(HolderSet<Item> items) {
+            return new ItemPredicate(Optional.of(items), MinMaxBounds.Ints.ANY, DataComponentMatchers.ANY);
         }
 
         private static ItemStack anythingMarker() {
             ItemStack stack = new ItemStack(Items.APPLE);
-            stack.set(DataComponentTypes.ITEM_NAME, Text.translatable("item_predicate.speedrun.alphabet.extra_req.items.any"));
+            stack.set(DataComponents.ITEM_NAME, Component.translatable("item_predicate.speedrun.alphabet.extra_req.items.any"));
             return stack;
         }
 
@@ -195,9 +195,9 @@ public sealed interface ItemPredicateProvider {
             }
         }
 
-        private record SimpleItem(RegistryEntryList<Item> items) implements ItemPredicateProvider {
-            SimpleItem(RegistryEntry<Item> item) {
-                this(RegistryEntryList.of(item));
+        private record SimpleItem(HolderSet<Item> items) implements ItemPredicateProvider {
+            SimpleItem(Holder<Item> item) {
+                this(HolderSet.direct(item));
             }
 
             @Override
@@ -208,7 +208,7 @@ public sealed interface ItemPredicateProvider {
             }
         }
 
-        private static SingleSpeedrunPredicate mapItem(RegistryEntry<Item> item) {
+        private static SingleSpeedrunPredicate mapItem(Holder<Item> item) {
             final ItemPredicate predicate = Impl.itemPredicate(item);
             ItemStack stack = new ItemStack(item);
             return new SingleSpeedrunPredicate.OfItemPredicate(predicate, stack);
@@ -226,11 +226,11 @@ public sealed interface ItemPredicateProvider {
             @Override
             public Stream<SingleSpeedrunPredicate> flatMaps() {
                 return MultiverseHooks.itemTagHolders(tagKey()).stream()
-                        .map(RegistryEntry::getKeyOrValue)
+                        .map(Holder::unwrap)
                         .map(either -> either.map(MultiverseHooks::getItem, Function.identity()))
                         .map(item -> {
                             ItemPredicate itemPredicate = new ItemPredicate(
-                                    Optional.of(RegistryEntryList.of(RegistryEntry.of(item))),
+                                    Optional.of(HolderSet.direct(Holder.direct(item))),
                                     predicate().count(),
                                     predicate().components()
                             );
@@ -245,23 +245,23 @@ public sealed interface ItemPredicateProvider {
                 ItemStack stack = Impl.anythingMarker();
                 fillExtraRequirements(stack, Either.left(tagKey()), null);
                 return Stream.of(new SingleSpeedrunPredicate.OfItemPredicate(
-                        ItemPredicate.Builder.create().tag(Registries.ITEM, tagKey()).build(),
+                        ItemPredicate.Builder.item().of(BuiltInRegistries.ITEM, tagKey()).build(),
                         stack
                 ));
             }
         }
 
-        private record OfAdvancement(Identifier advancementId) implements ItemPredicateProvider {
+        private record OfAdvancement(ResourceLocation advancementId) implements ItemPredicateProvider {
             @Override
             public Stream<SingleSpeedrunPredicate> flatMaps() {
-                return Stream.of(new SingleSpeedrunPredicate.OfAdvancement(advancementId, Items.GRASS_BLOCK.getDefaultStack()));
+                return Stream.of(new SingleSpeedrunPredicate.OfAdvancement(advancementId, Items.GRASS_BLOCK.getDefaultInstance()));
             }
         }
 
         private enum IconState implements BiConsumer<ItemStack, ItemStack> {
             USE_ICON("icon", (a, b) -> {}),
-            ICON_FIRST("covers_gen", (icon, right) -> icon.applyComponentsFrom(ComponentMap.of(icon.getComponents(), right.getComponents()))),
-            GEN_FIRST("covers_icon", (icon, right) -> icon.applyComponentsFrom(ComponentMap.of(right.getComponents(), icon.getComponents()))),
+            ICON_FIRST("covers_gen", (icon, right) -> icon.applyComponents(DataComponentMap.composite(icon.getComponents(), right.getComponents()))),
+            GEN_FIRST("covers_icon", (icon, right) -> icon.applyComponents(DataComponentMap.composite(right.getComponents(), icon.getComponents()))),
             ;
             private final String id;
             private final BiConsumer<ItemStack, ItemStack> consumer;
@@ -308,7 +308,7 @@ public sealed interface ItemPredicateProvider {
                         }
 
                         @Override
-                        public boolean fitsAdvancementGet(AdvancementEntry advancement) {
+                        public boolean fitsAdvancementGet(AdvancementHolder advancement) {
                             return p.fitsAdvancementGet(advancement);
                         }
 
@@ -336,32 +336,32 @@ public sealed interface ItemPredicateProvider {
         private Impl() {}
 
         private static void fillExtraRequirements(ItemStack stack,
-                                                  @Nullable Either<TagKey<Item>, RegistryEntryList<Item>> ofAny,
+                                                  @Nullable Either<TagKey<Item>, HolderSet<Item>> ofAny,
                                                   @Nullable ItemPredicate predicate) {
-            List<Text> appendedLores = new ArrayList<>();
+            List<Component> appendedLores = new ArrayList<>();
 
             if (predicate != null) {
                 // Count
-                NumberRange.IntRange count = predicate.count();
-                if (!count.isDummy())
-                    appendedLores.add(Text.translatable("item_predicate.speedrun.alphabet.extra_req.count", formatIntRange(count)));
+                MinMaxBounds.Ints count = predicate.count();
+                if (!count.isAny())
+                    appendedLores.add(Component.translatable("item_predicate.speedrun.alphabet.extra_req.count", formatIntRange(count)));
 
-                ComponentChanges componentChanges = predicate.components().exact().toChanges();
-                Map<ComponentPredicate.Type<?>, ComponentPredicate> partial = predicate.components().partial();
+                DataComponentPatch componentChanges = predicate.components().exact().asPatch();
+                Map<DataComponentPredicate.Type<?>, DataComponentPredicate> partial = predicate.components().partial();
                 // Damage
-                componentFromChanges(componentChanges, DataComponentTypes.DAMAGE).ifPresentOrElse(damage -> {
-                    appendedLores.add(Text.translatable("item_predicate.speedrun.alphabet.extra_req.damage", formatNumber(damage, damage)));
+                componentFromChanges(componentChanges, DataComponents.DAMAGE).ifPresentOrElse(damage -> {
+                    appendedLores.add(Component.translatable("item_predicate.speedrun.alphabet.extra_req.damage", formatNumber(damage, damage)));
                 }, () -> {
-                    if (partial.get(ComponentPredicateTypes.DAMAGE) instanceof DamagePredicate(
-                            NumberRange.IntRange durability, NumberRange.IntRange damage
+                    if (partial.get(DataComponentPredicates.DAMAGE) instanceof DamagePredicate(
+                            MinMaxBounds.Ints durability, MinMaxBounds.Ints damage
                     )) {
-                        appendedLores.add(Text.translatable("item_predicate.speedrun.alphabet.extra_req.durability", formatIntRange(durability)));
-                        appendedLores.add(Text.translatable("item_predicate.speedrun.alphabet.extra_req.damage", formatIntRange(damage)));
+                        appendedLores.add(Component.translatable("item_predicate.speedrun.alphabet.extra_req.durability", formatIntRange(durability)));
+                        appendedLores.add(Component.translatable("item_predicate.speedrun.alphabet.extra_req.damage", formatIntRange(damage)));
                     }
                 });
                 // Enchantments
-                readEnchantments(componentChanges, DataComponentTypes.STORED_ENCHANTMENTS, partial.get(ComponentPredicateTypes.STORED_ENCHANTMENTS), appendedLores::add);
-                readEnchantments(componentChanges, DataComponentTypes.ENCHANTMENTS, partial.get(ComponentPredicateTypes.ENCHANTMENTS), appendedLores::add);
+                readEnchantments(componentChanges, DataComponents.STORED_ENCHANTMENTS, partial.get(DataComponentPredicates.STORED_ENCHANTMENTS), appendedLores::add);
+                readEnchantments(componentChanges, DataComponents.ENCHANTMENTS, partial.get(DataComponentPredicates.ENCHANTMENTS), appendedLores::add);
 
                 // Custom Data
 
@@ -369,25 +369,25 @@ public sealed interface ItemPredicateProvider {
             }
 
             if (!appendedLores.isEmpty()) {
-                List<Text> lines = Optional.ofNullable(stack.get(DataComponentTypes.LORE))
-                        .map(LoreComponent::lines)
+                List<Component> lines = Optional.ofNullable(stack.get(DataComponents.LORE))
+                        .map(ItemLore::lines)
                         .orElse(Collections.emptyList());
                 lines = new ArrayList<>(lines);
                 lines.addAll(appendedLores);
-                stack.set(DataComponentTypes.LORE, new LoreComponent(lines));
+                stack.set(DataComponents.LORE, new ItemLore(lines));
             }
         }
 
-        private static void readEnchantments(ComponentChanges componentChanges,
-                                             ComponentType<ItemEnchantmentsComponent> componentType,
-                                             @Nullable ComponentPredicate componentPredicate,
-                                             Consumer<Text> loreAdder) {
+        private static void readEnchantments(DataComponentPatch componentChanges,
+                                             DataComponentType<ItemEnchantments> componentType,
+                                             @Nullable DataComponentPredicate componentPredicate,
+                                             Consumer<Component> loreAdder) {
             componentFromChanges(componentChanges, componentType).ifPresent(enchantments -> {
-                enchantments.getEnchantmentEntries().forEach(entry -> {
-                    RegistryEntry<Enchantment> enchantmentType = entry.getKey();
+                enchantments.entrySet().forEach(entry -> {
+                    Holder<Enchantment> enchantmentType = entry.getKey();
                     int enchantmentLevel = entry.getIntValue();
                     // Name
-                    loreAdder.accept(Text.empty()
+                    loreAdder.accept(Component.empty()
                             .append(enchantmentType.value().description())
                             .append(" ")
                             .append(formatNumber(enchantmentLevel, enchantmentLevel, true))
@@ -396,16 +396,16 @@ public sealed interface ItemPredicateProvider {
             });
             if (componentPredicate instanceof EnchantmentsPredicateAccessor enchantmentsPredicate) {
                 enchantmentsPredicate.alphabetSpeedrun$getEnchantments().forEach(enchantmentPredicate -> {
-                    Optional<RegistryEntryList<Enchantment>> enchantments = enchantmentPredicate.enchantments();
-                    NumberRange.IntRange levels = enchantmentPredicate.levels();
+                    Optional<HolderSet<Enchantment>> enchantments = enchantmentPredicate.enchantments();
+                    MinMaxBounds.Ints levels = enchantmentPredicate.level();
 
                     if (enchantments.isEmpty()) {
-                        loreAdder.accept(Text.translatable("item_predicate.speedrun.alphabet.extra_req.enchantments.any", formatEnchantmentLevels(levels)));
+                        loreAdder.accept(Component.translatable("item_predicate.speedrun.alphabet.extra_req.enchantments.any", formatEnchantmentLevels(levels)));
                     } else {
                         int size = enchantments.get().size();
                         if (size == 0) return;  // contains nothing
 
-                        loreAdder.accept(Text.empty()
+                        loreAdder.accept(Component.empty()
                                 .append(enchantments.get().get(0).value().description())
                                 .append(size == 1 ? " " : "... ")
                                 .append(formatEnchantmentLevels(levels))
@@ -415,30 +415,30 @@ public sealed interface ItemPredicateProvider {
             }
         }
 
-        private static Text formatIntRange(NumberRange.IntRange intRange) {
+        private static Component formatIntRange(MinMaxBounds.Ints intRange) {
             return formatNumber(intRange.min().orElse(null), intRange.max().orElse(null));
         }
 
-        private static Text formatEnchantmentLevels(NumberRange.IntRange intRange) {
+        private static Component formatEnchantmentLevels(MinMaxBounds.Ints intRange) {
             return formatNumber(intRange.min().orElse(null), intRange.max().orElse(null), true);
         }
 
-        private static Text formatNumber(@Nullable Integer min, @Nullable Integer max) {
+        private static Component formatNumber(@Nullable Integer min, @Nullable Integer max) {
             return formatNumber(min, max, false);
         }
 
         @Contract("null,null,_->fail")
-        private static Text formatNumber(@Nullable Integer min, @Nullable Integer max, boolean isEnchanting) {
+        private static Component formatNumber(@Nullable Integer min, @Nullable Integer max, boolean isEnchanting) {
             Preconditions.checkArgument(min != null || max != null);
-            if (min == null) return Text.translatable("item_predicate.speedrun.alphabet.extra_req.count.max", max);
-            if (max == null) return Text.translatable("item_predicate.speedrun.alphabet.extra_req.count.min", min);
+            if (min == null) return Component.translatable("item_predicate.speedrun.alphabet.extra_req.count.max", max);
+            if (max == null) return Component.translatable("item_predicate.speedrun.alphabet.extra_req.count.min", min);
             if (min.equals(max))
-                return isEnchanting ? Text.translatable("enchantment.level." + min)
-                        : Text.translatable("item_predicate.speedrun.alphabet.extra_req.count.exact", min);
-            return Text.translatable("item_predicate.speedrun.alphabet.extra_req.count.between", min, max);
+                return isEnchanting ? Component.translatable("enchantment.level." + min)
+                        : Component.translatable("item_predicate.speedrun.alphabet.extra_req.count.exact", min);
+            return Component.translatable("item_predicate.speedrun.alphabet.extra_req.count.between", min, max);
         }
 
-        private static <T> Optional<? extends T> componentFromChanges(ComponentChanges changes, ComponentType<? extends T> componentType) {
+        private static <T> Optional<? extends T> componentFromChanges(DataComponentPatch changes, DataComponentType<? extends T> componentType) {
             Optional<? extends T> t = changes.get(componentType);
             if (t == null) return Optional.empty();
             return t;

@@ -18,15 +18,15 @@
 
 package org.featurehouse.mcmod.speedrun.alphabeta.item.difficulty;
 
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 
 public interface ItemSpeedrunDifficulty {
-    void onStart(ServerPlayerEntity player);
-    Identifier getId();
+    void onStart(ServerPlayer player);
+    ResourceLocation getId();
 
-    default Text asText() {
-        return Text.literal(getId().toString());
+    default Component asText() {
+        return Component.literal(getId().toString());
     }
 }
