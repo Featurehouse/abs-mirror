@@ -27,6 +27,7 @@ import org.featurehouse.mcmod.speedrun.alphabeta.config.AlphabetSpeedrunConfigDa
 import org.featurehouse.mcmod.speedrun.alphabeta.config.ItemRunDifficultyRuleFactory;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.ClientItemSpeedrunEvents;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.ItemSpeedrunEvents;
+import org.featurehouse.mcmod.speedrun.alphabeta.item.components.ABSItemDataComponents;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.difficulty.DefaultItemSpeedrunDifficulty;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.difficulty.ItemSpeedrunDifficulty;
 import org.featurehouse.mcmod.speedrun.alphabeta.util.pack.BuiltinABSPackProvider;
@@ -42,6 +43,7 @@ import java.util.Collection;
 public class AlphabetSpeedrunMod {
     public static void init() {
         ItemSpeedrunEvents.init();
+        ABSItemDataComponents.REGISTRY.register();
         ItemSpeedrunEvents.MENU_REG.register();
         BuiltinABSPackProvider.init();
     }

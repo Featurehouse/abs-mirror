@@ -18,17 +18,18 @@
 
 package org.featurehouse.mcmod.speedrun.alphabeta.item.difficulty;
 
+import net.minecraft.component.DataComponentTypes;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.HoverEvent;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import org.featurehouse.mcmod.speedrun.alphabeta.config.AlphabetSpeedrunConfigData;
-import org.featurehouse.mcmod.speedrun.alphabeta.item.FireworkElytraUtils;
+import org.featurehouse.mcmod.speedrun.alphabeta.item.components.ABSItemDataComponents;
+import org.featurehouse.mcmod.speedrun.alphabeta.item.components.FireworkElytraUtils;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.ItemRecordAccess;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -82,6 +83,7 @@ public enum DefaultItemSpeedrunDifficulty implements ItemSpeedrunDifficulty {
     public void onStart(ServerPlayerEntity player) {
         ItemStack stack1 = elytraState.createItemStack(Items.ELYTRA, 1);
         final ItemRecordAccess record = player.alphabetSpeedrun$getItemRecordAccess();
+        // Detect if the player already has the Elytra that suits the difficulty
         if (stack1 != null && !player.getInventory().containsAny(itemStack -> {
             if (!itemStack.isOf(Items.ELYTRA)) return false;
             if (AlphabetSpeedrunConfigData.getInstance().isItemsOnlyAvailableWhenRunning() &&
@@ -89,11 +91,10 @@ public enum DefaultItemSpeedrunDifficulty implements ItemSpeedrunDifficulty {
                 return false;
             if (FireworkElytraUtils.bypassesItemCheck(itemStack)) {
                 if (elytraState == GivenItemState.COMMON) return true;
-                NbtCompound nbt = itemStack.getNbt();
-                return nbt != null && nbt.getBoolean("Unbreakable");
+                return itemStack.get(DataComponentTypes.UNBREAKABLE) != null;
             }
             return false;
-        })) {
+        })) {   // The player does not have the Elytra that suits the difficulty
             if (record != null)
                 FireworkElytraUtils.putRecordStamp(stack1, record);
             if (!player.giveItemStack(stack1)) {
@@ -101,6 +102,7 @@ public enum DefaultItemSpeedrunDifficulty implements ItemSpeedrunDifficulty {
             }
         }
         stack1 = fireworkState.createItemStack(Items.FIREWORK_ROCKET, 64);
+        // Detect if the player already has the Firework Rocket that suits the difficulty
         if (stack1 != null && !player.getInventory().containsAny(itemStack -> {
             if (!itemStack.isOf(Items.FIREWORK_ROCKET)) return false;
             if (AlphabetSpeedrunConfigData.getInstance().isItemsOnlyAvailableWhenRunning() &&
@@ -108,11 +110,10 @@ public enum DefaultItemSpeedrunDifficulty implements ItemSpeedrunDifficulty {
                 return false;
             if (FireworkElytraUtils.bypassesItemCheck(itemStack)) {
                 if (elytraState == GivenItemState.COMMON) return true;
-                NbtCompound nbt = itemStack.getNbt();
-                return nbt != null && nbt.getBoolean(FireworkElytraUtils.NO_SHRINKING);
+                return itemStack.get(ABSItemDataComponents.NO_SHRINKING.get()) != null;
             }
             return false;
-        })) {
+        })) {   // // The player does not have the Elytra that suits the difficulty
             if (record != null)
                 FireworkElytraUtils.putRecordStamp(stack1, record);
             if (!player.giveItemStack(stack1)) {
@@ -128,8 +129,7 @@ public enum DefaultItemSpeedrunDifficulty implements ItemSpeedrunDifficulty {
     @Override
     public Text asText() {
         return Text.translatable(translationKey)
-                .styled(s -> s.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                        Text.literal(id.toString()).formatted(Formatting.GRAY))));
+                .styled(s -> s.withHoverEvent(new HoverEvent.ShowText(Text.literal(id.toString()).formatted(Formatting.GRAY))));
     }
 
     private enum GivenItemState {

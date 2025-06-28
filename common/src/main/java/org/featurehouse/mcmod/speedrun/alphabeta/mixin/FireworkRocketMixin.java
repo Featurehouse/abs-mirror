@@ -20,7 +20,7 @@ package org.featurehouse.mcmod.speedrun.alphabeta.mixin;
 
 import net.minecraft.item.FireworkRocketItem;
 import net.minecraft.item.ItemStack;
-import org.featurehouse.mcmod.speedrun.alphabeta.item.FireworkElytraUtils;
+import org.featurehouse.mcmod.speedrun.alphabeta.item.components.FireworkElytraUtils;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;

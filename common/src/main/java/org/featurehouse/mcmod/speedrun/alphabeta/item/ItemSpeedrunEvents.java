@@ -56,6 +56,8 @@ import org.featurehouse.mcmod.speedrun.alphabeta.item.command.ItemSpeedrunComman
 import org.featurehouse.mcmod.speedrun.alphabeta.item.command.ItemSpeedrunCommands;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.difficulty.DefaultItemSpeedrunDifficulty;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.menu.ItemListViewMenu;
+import org.featurehouse.mcmod.speedrun.alphabeta.item.components.FireworkElytraUtils;
+import org.featurehouse.mcmod.speedrun.alphabeta.util.PacketUtil;
 import org.featurehouse.mcmod.speedrun.alphabeta.util.hooks.MultiverseHooks;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -292,18 +294,22 @@ public class ItemSpeedrunEvents {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public static final DeferredRegister<ScreenHandlerType<?>> MENU_REG = DeferredRegister.create("alphabet_speedrun", MultiverseHooks.menuKey());
-    public static final RegistrySupplier<ScreenHandlerType<ItemListViewMenu>> MENU_TYPE_R = MENU_REG.register("item_list", () ->
-            MenuRegistry.ofExtended((id, $, buf) -> new ItemListViewMenu(id, buf.readVarInt(), buf.readUuid(),
-                    size -> IntStream.range(0, size).mapToObj($$ -> buf.readItemStack()).collect(Collectors.toList()))));
+    public static final RegistrySupplier<ScreenHandlerType<ItemListViewMenu>> MENU_TYPE_R = MENU_REG.register(
+            "item_list",
+            () -> MenuRegistry.ofExtended(
+                    (id, $, buf) -> new ItemListViewMenu(
+                            id, buf.readVarInt(), buf.readUuid(),
+                            size -> IntStream.range(0, size).mapToObj($$ -> PacketUtil.readItemStack(buf)).collect(Collectors.toList()))
+            )
+    );
 
     @FunctionalInterface
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public interface CollectedItem {
         EventResult onCollect(Either<ItemStack, Advancement> obj, ServerPlayerEntity player, ItemRecordAccess record);
     }
 
-    @Deprecated
-    @SuppressWarnings("all")
+    @Deprecated(forRemoval = true)
     public static final Event<CollectedItem> COLLECTED_ITEM_EVENT = EventFactory.createEventResult();
 
 }

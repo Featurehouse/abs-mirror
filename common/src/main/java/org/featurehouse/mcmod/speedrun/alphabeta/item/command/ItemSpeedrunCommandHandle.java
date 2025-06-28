@@ -37,6 +37,7 @@ import org.featurehouse.mcmod.speedrun.alphabeta.item.difficulty.DefaultItemSpee
 import org.featurehouse.mcmod.speedrun.alphabeta.item.difficulty.ItemSpeedrunDifficulty;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.menu.ItemListMenuSync;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.menu.ItemListViewMenu;
+import org.featurehouse.mcmod.speedrun.alphabeta.util.PacketUtil;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -276,7 +277,7 @@ public final class ItemSpeedrunCommandHandle {
         }, goal.display()), buf -> {
             buf.writeVarInt(size);
             buf.writeUuid(record.recordId());
-            iconList.forEach(buf::writeItemStack);
+            iconList.forEach(itemStack -> PacketUtil.writeItemStack(buf, itemStack));
         });
         return 1;
     }
