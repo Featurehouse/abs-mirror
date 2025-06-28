@@ -18,7 +18,6 @@
 
 package org.featurehouse.mcmod.speedrun.alphabeta.util.hooks;
 
-import net.minecraft.enchantment.Enchantment;
 import net.minecraft.item.Item;
 import net.minecraft.obfuscate.DontObfuscate;
 import net.minecraft.registry.Registries;
@@ -37,7 +36,7 @@ import java.util.Optional;
 public class MultiverseHooks {
     @DontObfuscate  // #5: getstatic #0 #11 #2; aload 0; invokevirtual #0 #15 #5; areturn
     public static RegistryEntryList.Named<Item> itemTagHolders(TagKey<Item> tagKey) {
-        return Registries.ITEM.getOrCreateEntryList(tagKey);
+        return Registries.ITEM.getOrThrow(tagKey);
     }
 
     @DontObfuscate  // #7: getstatic #0 #11 #2; aload 0; invokevirtual #0 #16 #6; areturn
@@ -50,14 +49,14 @@ public class MultiverseHooks {
         return Registries.ITEM.get(id);
     }
 
-    @DontObfuscate  // #10: getstatic #0 #11 #2; aload 0; invokevirtual #0 #18 #10; areturn
-    public static Optional<Item> getOptionalItem(Identifier id) {
-        return Registries.ITEM.getOrEmpty(id);
+    @DontObfuscate
+    public static Item getItem(RegistryKey<Item> registryKey) {
+        return Registries.ITEM.get(registryKey);
     }
 
-    @DontObfuscate  // #10: getstatic #0 #13 #4; aload 0; invokevirtual #0 #18 #10; areturn
-    public static Optional<Enchantment> getOptionalEnchantment(Identifier id) {
-        return Registries.ENCHANTMENT.getOrEmpty(id);
+    @DontObfuscate  // #10: getstatic #0 #11 #2; aload 0; invokevirtual #0 #18 #10; areturn
+    public static Optional<Item> getOptionalItem(Identifier id) {
+        return Registries.ITEM.getOptionalValue(id);
     }
 
     @DontObfuscate  // ()#3: getstatic #0 #12 #3; areturn

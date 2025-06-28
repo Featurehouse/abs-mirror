@@ -5,8 +5,9 @@
   "client": [
   ],
   "mixins": [
-    "PlayerListMixin",
+    "EnchantmentsPredicateAccessor",
     "FireworkRocketMixin",
+    "PlayerListMixin",
     "ServerPlayerMixin"
   ],
   "injectors": {

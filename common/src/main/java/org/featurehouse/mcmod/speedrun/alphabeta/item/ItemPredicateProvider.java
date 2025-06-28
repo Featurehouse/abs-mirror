@@ -22,31 +22,39 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.gson.*;
 import com.mojang.datafixers.util.Either;
+import com.mojang.serialization.JsonOps;
 import net.minecraft.advancement.Advancement;
+import net.minecraft.component.ComponentChanges;
+import net.minecraft.component.ComponentMap;
+import net.minecraft.component.ComponentType;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.ItemEnchantmentsComponent;
+import net.minecraft.component.type.LoreComponent;
 import net.minecraft.enchantment.Enchantment;
-import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.nbt.NbtString;
 import net.minecraft.predicate.NumberRange;
+import net.minecraft.predicate.component.ComponentPredicate;
+import net.minecraft.predicate.component.ComponentPredicateTypes;
+import net.minecraft.predicate.component.ComponentsPredicate;
+import net.minecraft.predicate.item.DamagePredicate;
 import net.minecraft.predicate.item.ItemPredicate;
-import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.Registries;
 import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.entry.RegistryEntryList;
 import net.minecraft.registry.tag.TagKey;
-import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
+import org.featurehouse.mcmod.speedrun.alphabeta.mixin.EnchantmentsPredicateAccessor;
 import org.featurehouse.mcmod.speedrun.alphabeta.util.hooks.MultiverseHooks;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -85,45 +93,55 @@ public sealed interface ItemPredicateProvider {
             }
 
             if (JsonHelper.hasArray(obj, "items")) {
-                if (JsonHelper.hasString(obj, "tag")) throw new IllegalArgumentException("Item & tag cannot exist at the same time");
+                if (JsonHelper.hasString(obj, "tag"))
+                    throw new IllegalArgumentException("Item & tag cannot exist at the same time");
+
                 JsonArray items = obj.getAsJsonArray("items");
-                List<Item> itemList = new ArrayList<>();
+                List<RegistryEntry<Item>> itemList = new ArrayList<>();
                 for (JsonElement item : items) {
                     itemList.add(JsonHelper.asItem(item, "item"));
                 }
 
                 JsonObject predicate = JsonHelper.getObject(obj, "item_predicate", null);
-                if (predicate == null) return new Impl.SimpleItem(itemList);
-                predicate.add("items", items);
-                predicate.remove("tag");
-                ItemStack stack;
-                if (!itemList.isEmpty()) stack = new ItemStack(itemList.get(0));
-                else stack = Impl.anythingMarker();
-                Impl.fillExtraRequirements(stack, predicate);
-                return new Impl.CommonPredicate(ItemPredicate.fromJson(predicate), stack);
+                if (predicate == null)
+                    return new Impl.SimpleItem(RegistryEntryList.of(itemList));
+
+                ItemStack stack = itemList.isEmpty() ? Impl.anythingMarker() : new ItemStack(itemList.getFirst());
+
+                ItemPredicate itemPredicate = Impl.parseItemPredicate(predicate);
+                Impl.fillExtraRequirements(stack, Either.right(RegistryEntryList.of(itemList)), itemPredicate);
+
+                return new Impl.CommonPredicate(itemPredicate, stack);
             } else if (JsonHelper.hasString(obj, "tag")) {
                 String tag = JsonHelper.getString(obj, "tag");
                 TagKey<Item> tagKey = TagKey.of(MultiverseHooks.itemKey(), Identifier.of(tag));
                 @Nullable JsonObject predicate = JsonHelper.getObject(obj, "item_predicate", null);
                 if (JsonHelper.getBoolean(obj, "all", true)) {
                     if (predicate == null) return new Impl.EverythingInTag(tagKey);
-                    //Impl.fillExtraRequirements(marker, predicate);
-                    ItemPredicate.fromJson(predicate);    // throw json syntax/parse errors in advance
-                    return new Impl.ComplexAllInTag(tagKey, predicate);
+                    return new Impl.ComplexAllInTag(tagKey, Impl.parseItemPredicate(predicate));
                 } else {
                     if (predicate == null) return new Impl.AnythingInTag(tagKey);
+
                     ItemStack marker = Impl.anythingMarker();
-                    predicate.remove("items");
-                    predicate.addProperty("tag", tag);
-                    Impl.fillExtraRequirements(marker, predicate);
-                    return new Impl.CommonPredicate(ItemPredicate.fromJson(predicate), marker);
+                    ItemPredicate itemPredicate = Impl.parseItemPredicate(predicate);
+
+                    Impl.fillExtraRequirements(marker, Either.left(tagKey), itemPredicate);
+                    itemPredicate = ItemPredicate.Builder.create()
+                            .tag(Registries.ITEM, tagKey)
+                            .count(itemPredicate.count())
+                            .components(itemPredicate.components())
+                            .build();
+
+                    return new Impl.CommonPredicate(itemPredicate, marker);
                 }
             } else {
                 JsonObject predicate = JsonHelper.getObject(obj, "item_predicate", null);
                 if (predicate == null) return Impl.Any.INSTANCE;
+
                 ItemStack stack = Impl.anythingMarker();
-                Impl.fillExtraRequirements(stack, predicate);
-                return new Impl.CommonPredicate(ItemPredicate.fromJson(predicate), stack);
+                ItemPredicate itemPredicate = Impl.parseItemPredicate(predicate);
+                Impl.fillExtraRequirements(stack, null, itemPredicate);
+                return new Impl.CommonPredicate(itemPredicate, stack);
             }
         } else throw new IllegalArgumentException("Providing non-string-or-object value");
     }
@@ -134,20 +152,29 @@ public sealed interface ItemPredicateProvider {
             TagKey<Item> tagKey = TagKey.of(MultiverseHooks.itemKey(), Identifier.of(s.substring(1)));
             return new Impl.EverythingInTag(tagKey);
         } else {
-            Item item = JsonHelper.asItem(element, "element");
+            RegistryEntry<Item> item = JsonHelper.asItem(element, "element");
             return new Impl.SimpleItem(item);
         }
     }
 
     final class Impl {
-        private static ItemPredicate itemPredicate(Item... items) {
-            return ItemPredicate.Builder.create()
-                    .items(items).build();
+
+        private static ItemPredicate parseItemPredicate(JsonObject object) {
+            return ItemPredicate.CODEC.parse(JsonOps.INSTANCE, object).getOrThrow(JsonParseException::new);
+        }
+
+        @SafeVarargs
+        private static ItemPredicate itemPredicate(RegistryEntry<Item>... items) {
+            return itemPredicate(RegistryEntryList.of(items));
+        }
+
+        private static ItemPredicate itemPredicate(RegistryEntryList<Item> items) {
+            return new ItemPredicate(Optional.of(items), NumberRange.IntRange.ANY, ComponentsPredicate.EMPTY);
         }
 
         private static ItemStack anythingMarker() {
             ItemStack stack = new ItemStack(Items.APPLE);
-            stack.setCustomName(Text.translatable("item_predicate.speedrun.alphabet.extra_req.items.any"));
+            stack.set(DataComponentTypes.ITEM_NAME, Text.translatable("item_predicate.speedrun.alphabet.extra_req.items.any"));
             return stack;
         }
 
@@ -168,52 +195,46 @@ public sealed interface ItemPredicateProvider {
             }
         }
 
-        private record SimpleItem(List<Item> items) implements ItemPredicateProvider {
-            SimpleItem(Item item) {
-                this(Collections.singletonList(item));
+        private record SimpleItem(RegistryEntryList<Item> items) implements ItemPredicateProvider {
+            SimpleItem(RegistryEntry<Item> item) {
+                this(RegistryEntryList.of(item));
             }
 
             @Override
             public Stream<SingleSpeedrunPredicate> flatMaps() {
                 if (items.size() == 1)
                     return Stream.of(mapItem(items.get(0)));
-                return Stream.of(new SingleSpeedrunPredicate.OfItemPredicate(Impl.itemPredicate(items.toArray(new Item[0])), Impl.anythingMarker()));
+                return Stream.of(new SingleSpeedrunPredicate.OfItemPredicate(Impl.itemPredicate(items), Impl.anythingMarker()));
             }
         }
 
-        private static SingleSpeedrunPredicate mapItem(Item item) {
+        private static SingleSpeedrunPredicate mapItem(RegistryEntry<Item> item) {
             final ItemPredicate predicate = Impl.itemPredicate(item);
             ItemStack stack = new ItemStack(item);
-            //return Pair.of(predicate, stack);
             return new SingleSpeedrunPredicate.OfItemPredicate(predicate, stack);
         }
 
         private record EverythingInTag(TagKey<Item> tagKey) implements ItemPredicateProvider {
             @Override
             public Stream<SingleSpeedrunPredicate> flatMaps() {
-                return MultiverseHooks.itemTagHolders(tagKey()).stream()
-                        .map(RegistryEntry::value)
-                        .map(Impl::mapItem);
+                return MultiverseHooks.itemTagHolders(tagKey()).stream().map(Impl::mapItem);
             }
         }
 
         // @param itemPredicate must be checked.
-        private record ComplexAllInTag(TagKey<Item> tagKey, JsonObject itemPredicate) implements ItemPredicateProvider {
+        private record ComplexAllInTag(TagKey<Item> tagKey, ItemPredicate predicate) implements ItemPredicateProvider {
             @Override
             public Stream<SingleSpeedrunPredicate> flatMaps() {
                 return MultiverseHooks.itemTagHolders(tagKey()).stream()
                         .map(RegistryEntry::getKeyOrValue)
-                        .map(either -> either.map(RegistryKey::getValue, MultiverseHooks::itemId))
-                        .map(itemId -> {
-                            JsonObject itemPredicate = itemPredicate().deepCopy();
-                            itemPredicate.remove("tag");
-                            JsonArray arr = new JsonArray();
-                            arr.add(itemId.toString());
-                            itemPredicate.add("items", arr);
-                            ItemStack stack = new ItemStack(MultiverseHooks.getItem(itemId));
-                            Impl.fillExtraRequirements(stack, itemPredicate);
-                            //return Pair.of(ItemPredicate.fromJson(itemPredicate), stack);
-                            return new SingleSpeedrunPredicate.OfItemPredicate(ItemPredicate.fromJson(itemPredicate), stack);
+                        .map(either -> either.map(MultiverseHooks::getItem, Function.identity()))
+                        .map(item -> {
+                            ItemPredicate itemPredicate = new ItemPredicate(
+                                    Optional.of(RegistryEntryList.of(RegistryEntry.of(item))),
+                                    predicate().count(),
+                                    predicate().components()
+                            );
+                            return new SingleSpeedrunPredicate.OfItemPredicate(itemPredicate, new ItemStack(item));
                         });
             }
         }
@@ -221,11 +242,12 @@ public sealed interface ItemPredicateProvider {
         private record AnythingInTag(TagKey<Item> tagKey) implements ItemPredicateProvider {
             @Override
             public Stream<SingleSpeedrunPredicate> flatMaps() {
-                JsonObject obj = new JsonObject();
-                obj.addProperty("tag", tagKey().id().toString());
                 ItemStack stack = Impl.anythingMarker();
-                fillExtraRequirements(stack, obj);
-                return Stream.of(new SingleSpeedrunPredicate.OfItemPredicate(ItemPredicate.Builder.create().tag(tagKey()).build(), stack));
+                fillExtraRequirements(stack, Either.left(tagKey()), null);
+                return Stream.of(new SingleSpeedrunPredicate.OfItemPredicate(
+                        ItemPredicate.Builder.create().tag(Registries.ITEM, tagKey()).build(),
+                        stack
+                ));
             }
         }
 
@@ -238,25 +260,8 @@ public sealed interface ItemPredicateProvider {
 
         private enum IconState implements BiConsumer<ItemStack, ItemStack> {
             USE_ICON("icon", (a, b) -> {}),
-            ICON_FIRST("covers_gen", (icon, right) -> {
-                final NbtCompound rightNbt = right.getNbt();
-
-                if (!icon.hasNbt()) {
-                    icon.setNbt(rightNbt);
-                } else if (rightNbt != null) {
-                    // merge NBT
-                    rightNbt.copyFrom(icon.getNbt());
-                    icon.setNbt(rightNbt);
-                }
-            }),
-            GEN_FIRST("covers_icon", (icon, right) -> {
-                final NbtCompound rightNbt = right.getNbt();
-                if (rightNbt != null) {
-                    if (!icon.hasNbt())
-                        icon.setNbt(rightNbt);
-                    else rightNbt.copyFrom(icon.getNbt());
-                }
-            })
+            ICON_FIRST("covers_gen", (icon, right) -> icon.applyComponentsFrom(ComponentMap.of(icon.getComponents(), right.getComponents()))),
+            GEN_FIRST("covers_icon", (icon, right) -> icon.applyComponentsFrom(ComponentMap.of(right.getComponents(), icon.getComponents()))),
             ;
             private final String id;
             private final BiConsumer<ItemStack, ItemStack> consumer;
@@ -277,7 +282,7 @@ public sealed interface ItemPredicateProvider {
                 return id;
             }
 
-            public static IconState getIconState(String id) {
+            public static IconState getIconState(@Nullable String id) {
                 if (id == null)
                     return ICON_FIRST;
                 final IconState ret = BY_ID.get(id);
@@ -325,100 +330,92 @@ public sealed interface ItemPredicateProvider {
 
         private Impl() {}
 
-        private static void fillExtraRequirements(ItemStack stack, JsonObject itemPredicate) {
-            // Count
-            NumberRange.IntRange count = NumberRange.IntRange.fromJson(itemPredicate.get("count"));
-            NumberRange.IntRange durability = NumberRange.IntRange.fromJson(itemPredicate.get("durability"));
-            NbtList loreList = new NbtList();
-            if (!count.isDummy())
-                loreList.add(serializeText(Text.translatable("item_predicate.speedrun.alphabet.extra_req.durability",
-                        formatNumber(durability.getMin(), durability.getMax()))));
-            if (!durability.isDummy())
-                loreList.add(serializeText(Text.translatable("item_predicate.speedrun.alphabet.extra_req.durability",
-                        formatNumber(durability.getMin(), durability.getMax()))));
-            if (itemPredicate.has("nbt"))
-                loreList.add(serializeText(Text.translatable("item_predicate.speedrun.alphabet.extra_req.nbt")));
-            if (itemPredicate.has("potion"))
-                stack.getOrCreateNbt().putString("Potion", JsonHelper.getString(itemPredicate, "potion"));
-            var storedEnchantmentCtx = readEnchantments(itemPredicate.get("stored_enchantments"));
-            if (storedEnchantmentCtx != null) {
-                storedEnchantmentCtx.ifRight(m ->
-                        EnchantmentHelper.set(m, stack))
-                        .ifLeft(l -> {
-                            loreList.add(serializeText(Text.translatable("item_predicate.speedrun.alphabet.extra_req.enchantments.stored")));
-                            l.forEach(t -> loreList.add(serializeText(t)));
-                        });
-            } else {
-                var enchantmentCtx = readEnchantments(itemPredicate.get("enchantments"));
-                if (enchantmentCtx != null) {
-                    enchantmentCtx.ifRight(m ->
-                            EnchantmentHelper.set(m, stack))
-                            .ifLeft(l -> {
-                                loreList.add(serializeText(Text.translatable("item_predicate.speedrun.alphabet.extra_req.enchantments")));
-                                l.forEach(t -> loreList.add(serializeText(t)));
-                            });
-                }
-            }
-            if (itemPredicate.has("tag")) {
-                final String tag = JsonHelper.getString(itemPredicate, "tag");
-                loreList.add(serializeText(Text.translatable("item_predicate.speedrun.alphabet.extra_req.tag", tag)));
-            } else {
-                JsonArray items = JsonHelper.getArray(itemPredicate, "items", null);
-                if (items != null && items.size() > 1) {
-                    MutableText text = Text.empty();
-                    boolean b = false;
-                    for (JsonElement e : items) {
-                        Identifier id = Identifier.of(JsonHelper.asString(e, "item"));
-                        final Item item = MultiverseHooks.getOptionalItem(id).orElseThrow(() -> new JsonSyntaxException("Unknown item id '" + id + '\''));
-                        if (b) text.append(", ");
-                        b = true;
-                        text.append(Text.translatable(item.getTranslationKey()).formatted(Formatting.AQUA));
+        private static void fillExtraRequirements(ItemStack stack,
+                                                  @Nullable Either<TagKey<Item>, RegistryEntryList<Item>> ofAny,
+                                                  @Nullable ItemPredicate predicate) {
+            List<Text> appendedLores = new ArrayList<>();
+
+            if (predicate != null) {
+                // Count
+                NumberRange.IntRange count = predicate.count();
+                if (!count.isDummy())
+                    appendedLores.add(Text.translatable("item_predicate.speedrun.alphabet.extra_req.count", formatIntRange(count)));
+
+                ComponentChanges componentChanges = predicate.components().exact().toChanges();
+                Map<ComponentPredicate.Type<?>, ComponentPredicate> partial = predicate.components().partial();
+                // Damage
+                componentFromChanges(componentChanges, DataComponentTypes.DAMAGE).ifPresentOrElse(damage -> {
+                    appendedLores.add(Text.translatable("item_predicate.speedrun.alphabet.extra_req.damage", formatNumber(damage, damage)));
+                }, () -> {
+                    if (partial.get(ComponentPredicateTypes.DAMAGE) instanceof DamagePredicate(
+                            NumberRange.IntRange durability, NumberRange.IntRange damage
+                    )) {
+                        appendedLores.add(Text.translatable("item_predicate.speedrun.alphabet.extra_req.durability", formatIntRange(durability)));
+                        appendedLores.add(Text.translatable("item_predicate.speedrun.alphabet.extra_req.damage", formatIntRange(damage)));
                     }
-                    text = Text.translatable("item_predicate.speedrun.alphabet.extra_req.items", text);
-                    loreList.add(serializeText(text));
-                }
+                });
+                // Enchantments
+                readEnchantments(componentChanges, DataComponentTypes.STORED_ENCHANTMENTS, partial.get(ComponentPredicateTypes.STORED_ENCHANTMENTS), appendedLores::add);
+                readEnchantments(componentChanges, DataComponentTypes.ENCHANTMENTS, partial.get(ComponentPredicateTypes.ENCHANTMENTS), appendedLores::add);
+
+                // Custom Data
+
+                // TODO: fill other extra requirements
             }
-            if (!loreList.isEmpty()) {
-                stack.getOrCreateSubNbt("display").put("Lore", loreList);
+
+            if (!appendedLores.isEmpty()) {
+                List<Text> lines = Optional.ofNullable(stack.get(DataComponentTypes.LORE))
+                        .map(LoreComponent::lines)
+                        .orElse(Collections.emptyList());
+                lines = new ArrayList<>(lines);
+                lines.addAll(appendedLores);
+                stack.set(DataComponentTypes.LORE, new LoreComponent(lines));
             }
         }
 
-        private static @Nullable Either<List<Text>, Map<Enchantment, Integer>> readEnchantments(@Nullable JsonElement el) {
-            if (el == null || el.isJsonNull()) return null; // no conditions
-            JsonArray arr = JsonHelper.asArray(el, "enchantments");
-            Map<Enchantment, Integer> map = new HashMap<>();
-            List<Text> texts = new ArrayList<>();
-            for (JsonElement e : arr) {
-                if (e.isJsonNull()) continue;
-                final JsonObject o = JsonHelper.asObject(e, "enchantment");
-                Enchantment enchantment = null;
-                if (o.has("enchantment")) {
-                    Identifier identifier = Identifier.of(JsonHelper.getString(o, "enchantment"));
-                    enchantment = MultiverseHooks.getOptionalEnchantment(identifier).orElseThrow(() -> new JsonSyntaxException("Unknown enchantment '" + identifier + '\''));
-                }
-                NumberRange.IntRange intRange = NumberRange.IntRange.fromJson(o.get("levels"));
-                final boolean dummy = intRange.isDummy();
-                if (enchantment == null && dummy) continue;
-                if (dummy) {    // enchantment != null
-                    texts.add(Text.translatable(enchantment.getTranslationKey()));
-                    map = null;
-                } else if (enchantment == null) {
-                    texts.add(Text.translatable("item_predicate.speedrun.alphabet.extra_req.enchantments.any",
-                            formatNumber(intRange.getMin(), intRange.getMax(), true)));
-                    map = null;
-                } else {
-                    texts.add(Text.translatable(enchantment.getTranslationKey())
-                            .append(" ").append(formatNumber(intRange.getMin(), intRange.getMax(), true)));
-                    if (map != null && Objects.equals(intRange.getMin(), intRange.getMax()))
-                        map.put(enchantment, intRange.getMin());
-                }
+        private static void readEnchantments(ComponentChanges componentChanges,
+                                             ComponentType<ItemEnchantmentsComponent> componentType,
+                                             @Nullable ComponentPredicate componentPredicate,
+                                             Consumer<Text> loreAdder) {
+            componentFromChanges(componentChanges, componentType).ifPresent(enchantments -> {
+                enchantments.getEnchantmentEntries().forEach(entry -> {
+                    RegistryEntry<Enchantment> enchantmentType = entry.getKey();
+                    int enchantmentLevel = entry.getIntValue();
+                    // Name
+                    loreAdder.accept(Text.empty()
+                            .append(enchantmentType.value().description())
+                            .append(" ")
+                            .append(formatNumber(enchantmentLevel, enchantmentLevel, true))
+                    );
+                });
+            });
+            if (componentPredicate instanceof EnchantmentsPredicateAccessor enchantmentsPredicate) {
+                enchantmentsPredicate.alphabetSpeedrun$getEnchantments().forEach(enchantmentPredicate -> {
+                    Optional<RegistryEntryList<Enchantment>> enchantments = enchantmentPredicate.enchantments();
+                    NumberRange.IntRange levels = enchantmentPredicate.levels();
+
+                    if (enchantments.isEmpty()) {
+                        loreAdder.accept(Text.translatable("item_predicate.speedrun.alphabet.extra_req.enchantments.any", formatEnchantmentLevels(levels)));
+                    } else {
+                        int size = enchantments.get().size();
+                        if (size == 0) return;  // contains nothing
+
+                        loreAdder.accept(Text.empty()
+                                .append(enchantments.get().get(0).value().description())
+                                .append(size == 1 ? " " : "... ")
+                                .append(formatEnchantmentLevels(levels))
+                        );
+                    }
+                });
             }
-            if (map != null && !map.isEmpty()) return Either.right(map);
-            return texts.isEmpty() ? null : Either.left(texts);
         }
 
-        private static NbtString serializeText(Text text) {
-            return NbtString.of(Text.Serializer.toJson(text));
+        private static Text formatIntRange(NumberRange.IntRange intRange) {
+            return formatNumber(intRange.min().orElse(null), intRange.max().orElse(null));
+        }
+
+        private static Text formatEnchantmentLevels(NumberRange.IntRange intRange) {
+            return formatNumber(intRange.min().orElse(null), intRange.max().orElse(null), true);
         }
 
         private static Text formatNumber(@Nullable Integer min, @Nullable Integer max) {
@@ -434,6 +431,12 @@ public sealed interface ItemPredicateProvider {
                 return isEnchanting ? Text.translatable("enchantment.level." + min)
                         : Text.translatable("item_predicate.speedrun.alphabet.extra_req.count.exact", min);
             return Text.translatable("item_predicate.speedrun.alphabet.extra_req.count.between", min, max);
+        }
+
+        private static <T> Optional<? extends T> componentFromChanges(ComponentChanges changes, ComponentType<? extends T> componentType) {
+            Optional<? extends T> t = changes.get(componentType);
+            if (t == null) return Optional.empty();
+            return t;
         }
     }
 }

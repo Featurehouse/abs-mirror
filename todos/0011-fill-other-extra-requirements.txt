@@ -1,0 +1,6 @@
+Title: Fill other extra requirement for ItemPredicateProvider
+
+Date: Sat 28 Jun 2025 17:56
+
+Should include most `exact` & `partial` predicates.
+Design a tooltip for each.
