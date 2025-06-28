@@ -40,6 +40,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.util.GlfwUtil;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
+import net.minecraft.network.packet.CustomPayload;
 import net.minecraft.resource.ResourceType;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.server.MinecraftServer;
@@ -57,6 +58,7 @@ import org.featurehouse.mcmod.speedrun.alphabeta.item.command.ItemSpeedrunComman
 import org.featurehouse.mcmod.speedrun.alphabeta.item.difficulty.DefaultItemSpeedrunDifficulty;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.menu.ItemListViewMenu;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.components.FireworkElytraUtils;
+import org.featurehouse.mcmod.speedrun.alphabeta.item.menu.OpenItemListPayload;
 import org.featurehouse.mcmod.speedrun.alphabeta.util.PacketUtil;
 import org.featurehouse.mcmod.speedrun.alphabeta.util.hooks.MultiverseHooks;
 import org.jetbrains.annotations.Nullable;
@@ -121,12 +123,11 @@ public class ItemSpeedrunEvents {
                 record.setLastQuitTime(-1);
             }
         });
-        NetworkManager.registerReceiver(NetworkManager.c2s(), Identifier.of("alphabet_speedrun", "item_list"),
-                (buf, context) -> context.queue(() ->
-                        ItemSpeedrunCommandHandle.viewCurrentRecord(
-                                text -> context.getPlayer().sendMessage(text.copy().formatted(Formatting.RED)),
-                                ((ServerPlayerEntity) context.getPlayer())
-                        )));
+        NetworkManager.registerReceiver(NetworkManager.c2s(), OpenItemListPayload.ID, OpenItemListPayload.PACKET_CODEC, (payload, context) -> context.queue(() ->
+                ItemSpeedrunCommandHandle.viewCurrentRecord(
+                        text -> context.getPlayer().sendMessage(text.copy().formatted(Formatting.RED), false),
+                        ((ServerPlayerEntity) context.getPlayer())
+                )));
 
         // Register ItemOnlyAvailableWhenRunning events
         TickEvent.PLAYER_POST.register(player -> {

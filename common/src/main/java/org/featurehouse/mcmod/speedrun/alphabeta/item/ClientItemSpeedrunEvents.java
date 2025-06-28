@@ -22,13 +22,11 @@ import dev.architectury.event.events.client.ClientTickEvent;
 import dev.architectury.networking.NetworkManager;
 import dev.architectury.registry.client.keymappings.KeyMappingRegistry;
 import dev.architectury.registry.menu.MenuRegistry;
-import io.netty.buffer.Unpooled;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.option.KeyBinding;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.util.Identifier;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.menu.ClientItemListScreen;
+import org.featurehouse.mcmod.speedrun.alphabeta.item.menu.OpenItemListPayload;
 import org.lwjgl.glfw.GLFW;
 
 @Environment(EnvType.CLIENT)
@@ -41,8 +39,7 @@ public class ClientItemSpeedrunEvents {
         KeyMappingRegistry.register(VIEW_CURRENT_KEY);
         ClientTickEvent.CLIENT_POST.register(client -> {
             if (VIEW_CURRENT_KEY.wasPressed()) {
-                NetworkManager.sendToServer(Identifier.of("alphabet_speedrun", "item_list"),
-                        new PacketByteBuf(Unpooled.EMPTY_BUFFER));
+                NetworkManager.sendToServer(new OpenItemListPayload());
             }
         });
     }
