@@ -84,7 +84,7 @@ public record RecordSnapshot(long duration, int collected, int required, Identif
                                 .map(spr -> spr.display().copy())
                                 .orElseGet(() -> Text.translatable("message.speedrun_alphabet.item.goal.unknown"))
                         ).append(Text.literal("#" + ItemRecordMessages.uuidShort(this.recordId())).formatted(Formatting.GRAY)))
-                .styled(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, recordInnerText())));
+                .styled(style -> style.withHoverEvent(new HoverEvent.ShowText(recordInnerText())));
     }
 
     private Text recordInnerText() {

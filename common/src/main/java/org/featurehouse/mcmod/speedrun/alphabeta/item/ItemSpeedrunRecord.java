@@ -22,12 +22,7 @@ import com.google.common.collect.Maps;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.StringNbtReader;
-import net.minecraft.nbt.visitor.StringNbtWriter;
-import net.minecraft.predicate.item.ItemPredicate;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Formatting;
@@ -40,7 +35,6 @@ import org.featurehouse.mcmod.speedrun.alphabeta.item.command.ItemSpeedrunComman
 import org.featurehouse.mcmod.speedrun.alphabeta.item.difficulty.DefaultItemSpeedrunDifficulty;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.difficulty.ItemSpeedrunDifficulty;
 import org.featurehouse.mcmod.speedrun.alphabeta.util.MixinSensitive;
-import org.featurehouse.mcmod.speedrun.alphabeta.util.hooks.MultiverseHooks;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -101,7 +95,7 @@ public final class ItemSpeedrunRecord implements ItemRecordAccess {
 
     public List<ItemStack> displayedStacks() {
         //return displayedStacks.stream().map(ItemStack::copy).toList();
-        return predicates.stream().map(SingleSpeedrunPredicate::getIcon).toList();
+        return predicates.stream().map(SingleSpeedrunPredicate::icon).toList();
     }
 
     public boolean tryMarkDone(long currentOverworldTime) {
@@ -168,24 +162,9 @@ public final class ItemSpeedrunRecord implements ItemRecordAccess {
         JsonArray arr;
 
         List<SingleSpeedrunPredicate> itemPredicates;
-        if (JsonHelper.hasArray(root, "displayed_stacks")) {
-            // schema: v3.0.x
-            // assert: only OfItemPredicate is used
-            arr = JsonHelper.getArray(root, "requirements");
-            final JsonArray dps0 = JsonHelper.getArray(root, "displayed_stacks");
-            int minSize = Math.min(arr.size(), dps0.size());
-            itemPredicates = new ArrayList<>(minSize);
-            for (int i = 0; i < minSize; i++) {
-                JsonElement r0 = arr.get(i), d0 = dps0.get(i);
-                ItemStack stack = jsonToStack(JsonHelper.asObject(d0, "item_legacy"));
-                ItemPredicate predicate = ItemPredicate.fromJson(r0);
-                itemPredicates.add(new SingleSpeedrunPredicate.OfItemPredicate(predicate, stack));
-            }
-        } else {
-            arr = JsonHelper.getArray(root, "predicates");
-            itemPredicates = new ArrayList<>(arr.size());
-            arr.forEach(e -> itemPredicates.add(SingleSpeedrunPredicate.deserialize(JsonHelper.asObject(e, "predicate"))));
-        }
+        arr = JsonHelper.getArray(root, "predicates");
+        itemPredicates = new ArrayList<>(arr.size());
+        arr.forEach(e -> itemPredicates.add(SingleSpeedrunPredicate.deserialize(JsonHelper.asObject(e, "predicate"))));
 
 
         arr = JsonHelper.getArray(root, "collected");
@@ -210,29 +189,6 @@ public final class ItemSpeedrunRecord implements ItemRecordAccess {
                 startTime, finishTime, lastQuitTime, vacantTime, difficulty1, mates);
     }
 
-    static JsonObject stackToJson(ItemStack stack) {
-        JsonObject obj = new JsonObject();
-        obj.addProperty("item", MultiverseHooks.itemId(stack.getItem()).toString());
-        obj.addProperty("Count", stack.getCount());
-        if (stack.hasNbt()) {
-            obj.addProperty("nbt_c", new StringNbtWriter().apply(stack.getNbt()));
-        }
-        return obj;
-    }
-
-    static ItemStack jsonToStack(JsonObject obj) {
-        final Item item = JsonHelper.getItem(obj, "item");
-        final int count = JsonHelper.getInt(obj, "Count");
-        ItemStack stack = new ItemStack(item, count);
-        if (JsonHelper.hasString(obj, "nbt_c")) {
-            final String c = JsonHelper.getString(obj, "nbt_c");
-            try {
-                stack.setNbt(StringNbtReader.parse(c));
-            } catch (CommandSyntaxException ignore0) {
-            }
-        }
-        return stack;
-    }
     // Serializations END
 
     public long timeSince(long current) {

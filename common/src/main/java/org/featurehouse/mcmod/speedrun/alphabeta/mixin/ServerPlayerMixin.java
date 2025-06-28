@@ -20,16 +20,18 @@ package org.featurehouse.mcmod.speedrun.alphabeta.mixin;
 
 import com.google.gson.JsonObject;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.NbtCompound;
 import net.minecraft.obfuscate.DontObfuscate;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.storage.ReadView;
+import net.minecraft.storage.WriteView;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.*;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.coop.CoopRecordManager;
 import org.featurehouse.mcmod.speedrun.alphabeta.util.JsonYYDS;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -37,7 +39,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ServerPlayerEntity.class)
 public abstract class ServerPlayerMixin extends PlayerEntity implements ItemCollector, InternalItemCollector {
-    @DontObfuscate @Nullable ItemRecordAccess alphabetSpeedrun$currentRecord;
+    @Unique
+    @DontObfuscate
+    @Nullable
+    ItemRecordAccess alphabetSpeedrun$currentRecord;
+    @Unique
     @DontObfuscate
     @Nullable
     private JsonObject alphabetSpeedrun$itemRecordHistory;
@@ -56,25 +62,26 @@ public abstract class ServerPlayerMixin extends PlayerEntity implements ItemColl
         alphabetSpeedrun$currentRecord = record;
     }
 
-    @Inject(method = "readCustomDataFromNbt", at = @At("RETURN"))
-    private void onReadFromNbt(NbtCompound nbt, CallbackInfo ci) {
+    @Inject(method = "readCustomData", at = @At("RETURN"))
+    private void onReadFromNbt(ReadView view, CallbackInfo ci) {
         try {
-            this.alphabetSpeedrun$currentRecord = JsonYYDS.getFromNbtByteArray(nbt, "AlphabetSpeedrunItemRecord_s")
+            this.alphabetSpeedrun$currentRecord = JsonYYDS.getFromReadView(view, "AlphabetSpeedrun_CurrentRecord")
                     .map(obj -> ItemRecordAccess.fromJsonMeta(obj, CoopRecordManager.fromServer(alphabetSpeedrun$getServer())))
                     .orElse(null);
         } catch (RuntimeException e) {
-            ItemSpeedrunEvents.LOGGER.error("Failed to read player NBT from " + this.uuidString, e);
+            ItemSpeedrunEvents.LOGGER.error("Failed to read player custom data from {}", this.uuidString, e);
         }
-        this.alphabetSpeedrun$itemRecordHistory = JsonYYDS.getFromNbtByteArray(nbt, "AlphabetSpeedrunItemRecordHistory_s").orElse(null);
+        this.alphabetSpeedrun$itemRecordHistory = JsonYYDS.getFromReadView(view, "AlphabetSpeedrun_HistoryRecord").orElse(null);
     }
 
-    @Inject(method = "writeCustomDataToNbt", at = @At("RETURN"))
-    private void onWriteToNbt(NbtCompound nbt, CallbackInfo ci) {
+    @Inject(method = "writeCustomData", at = @At("RETURN"))
+    private void onWriteToNbt(WriteView view, CallbackInfo ci) {
         if (alphabetSpeedrun$currentRecord != null) {
-            nbt.put("AlphabetSpeedrunItemRecord_s", JsonYYDS.toByteArray(alphabetSpeedrun$currentRecord.toJsonMeta()));
+            JsonYYDS.writeToWriteView(alphabetSpeedrun$currentRecord.toJsonMeta(), view, "AlphabetSpeedrun_CurrentRecord");
         }
-        if (this.alphabetSpeedrun$itemRecordHistory != null)
-            nbt.put("AlphabetSpeedrunItemRecordHistory_s", JsonYYDS.toByteArray(alphabetSpeedrun$itemRecordHistory));
+        if (this.alphabetSpeedrun$itemRecordHistory != null) {
+            JsonYYDS.writeToWriteView(alphabetSpeedrun$itemRecordHistory, view, "AlphabetSpeedrun_HistoryRecord");
+        }
     }
 
     @Override

@@ -19,18 +19,31 @@
 package org.featurehouse.mcmod.speedrun.alphabeta.util;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import net.minecraft.nbt.NbtByteArray;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
+import com.google.gson.JsonParseException;
+import com.mojang.logging.LogUtils;
+import com.mojang.serialization.Codec;
+import net.minecraft.resource.Resource;
+import net.minecraft.resource.ResourceFinder;
+import net.minecraft.resource.ResourceManager;
+import net.minecraft.storage.ReadView;
+import net.minecraft.storage.WriteView;
+import net.minecraft.util.Identifier;
+import net.minecraft.util.StrictJsonParser;
+import org.slf4j.Logger;
 
 import java.io.*;
+import java.nio.ByteBuffer;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 public final class JsonYYDS {
     private static final Gson GSON = new Gson();
+    private static final Logger LOGGER = LogUtils.getLogger();
 
     public static JsonObject fromByteArray(byte[] arr) {
         try (var reader = new InputStreamReader(new GZIPInputStream(new ByteArrayInputStream(arr)))) {
@@ -38,17 +51,33 @@ public final class JsonYYDS {
         } catch (IOException impossible) { throw new IncompatibleClassChangeError(); }
     }
 
-    public static Optional<JsonObject> getFromNbtByteArray(NbtCompound root, String key) {
-        if (root.contains(key, NbtElement.BYTE_ARRAY_TYPE)) {
-            return Optional.of(fromByteArray(root.getByteArray(key)));
-        } else return Optional.empty();
+    public static Optional<JsonObject> getFromReadView(ReadView view, String key) {
+        return view.read(key, Codec.BYTE_BUFFER).map(ByteBuffer::array).map(JsonYYDS::fromByteArray);
     }
 
-    public static NbtByteArray toByteArray(JsonObject obj) {
+    public static void writeToWriteView(JsonObject obj, WriteView view, String key) {
         var buffer = new ByteArrayOutputStream();
         try (var writer = new OutputStreamWriter(new GZIPOutputStream(buffer))) {
             GSON.toJson(obj, writer);
         } catch (IOException e) { throw new IncompatibleClassChangeError(); }
-        return new NbtByteArray(buffer.toByteArray());
+        view.put(key, Codec.BYTE_BUFFER, ByteBuffer.wrap(buffer.toByteArray()));
+    }
+
+    public static Map<Identifier, JsonElement> loadJsonResources(ResourceManager manager, ResourceFinder finder) {
+        Map<Identifier, JsonElement> map = new LinkedHashMap<>();
+
+        for (Map.Entry<Identifier, Resource> entry : finder.findResources(manager).entrySet()) {
+            Identifier id = entry.getKey();
+            Identifier key = finder.toResourceId(id);
+            Resource resource = entry.getValue();
+
+            try (Reader reader = resource.getReader()) {
+                if (map.putIfAbsent(key, StrictJsonParser.parse(reader)) != null)
+                    throw new IllegalStateException("Duplicate data file ignored with ID " + key);
+            } catch (IllegalArgumentException | IOException | JsonParseException e) {
+                LOGGER.error("Couldn't parse data file '{}' from '{}'", key, id, e);
+            }
+        }
+        return map;
     }
 }

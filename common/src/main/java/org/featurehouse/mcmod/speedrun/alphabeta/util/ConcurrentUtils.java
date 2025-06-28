@@ -23,7 +23,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 
 public class ConcurrentUtils {
-
     public static void run(CompletableFuture<Void> completableFuture, Consumer<Exception> onFailure) {
         Thread.ofVirtual().name("ABS-Concurrent-", 1).start(() -> {
             try {

@@ -35,12 +35,11 @@ import dev.architectury.registry.menu.MenuRegistry;
 import dev.architectury.registry.registries.DeferredRegister;
 import dev.architectury.registry.registries.RegistrySupplier;
 import dev.architectury.utils.Env;
-import net.minecraft.advancement.Advancement;
+import net.minecraft.advancement.AdvancementEntry;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.util.GlfwUtil;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
-import net.minecraft.network.packet.CustomPayload;
 import net.minecraft.resource.ResourceType;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.server.MinecraftServer;
@@ -74,7 +73,7 @@ import java.util.stream.IntStream;
 public class ItemSpeedrunEvents {
     @FunctionalInterface
     public interface CollectedOne {
-        EventResult onCollect(Either<ItemStack, Advancement> obj, ItemStack icon, ServerPlayerEntity player, ItemRecordAccess record);
+        EventResult onCollect(Either<ItemStack, AdvancementEntry> obj, ItemStack icon, ServerPlayerEntity player, ItemRecordAccess record);
     }
 
     public static final Event<CollectedOne> COLLECTED_ONE_EVENT = EventFactory.createEventResult();
@@ -104,10 +103,10 @@ public class ItemSpeedrunEvents {
     public static void init() {
         CommandRegistrationEvent.EVENT.register((dispatcher, registry, selection) -> ItemSpeedrunCommands.registerCommands(dispatcher));
         //PlayerEvent.PICKUP_ITEM_POST.register((player, itemEntity, stack) -> onItemPickup(player, stack));
-        ReloadListenerRegistry.register(ResourceType.SERVER_DATA, new ItemSpeedrun.DataLoader());
+        ReloadListenerRegistry.register(ResourceType.SERVER_DATA, new ItemSpeedrun.DataLoader(), Identifier.of("alphabet_speedrun", "goals"));
         START_RUNNING_EVENT.register((player, record, resumeFrom) -> {
             ItemSpeedrunCommandHandle.tryResumeInventory(player);
-            final long currentTime = player.server.getOverworld().getTime();
+            final long currentTime = player.getServer().getOverworld().getTime();
             ItemSpeedrunEvents.tryFinishRecord(record, currentTime, player);
             if (AlphabetSpeedrunConfigData.getInstance().isItemsOnlyAvailableWhenRunning()) {
                 if (resumeFrom >= 0 /*resume, not start*/ && record.difficulty() instanceof DefaultItemSpeedrunDifficulty) {
@@ -169,7 +168,7 @@ public class ItemSpeedrunEvents {
         // Register TimerPausesWhenVacant events
         STOP_RUNNING_EVENT_PRE.register((player, record) -> {
             if (!record.isCoop() && AlphabetSpeedrunConfigData.getInstance().isTimerPausesWhenVacant()) {
-                record.setLastQuitTime(player.server.getOverworld().getTime());
+                record.setLastQuitTime(player.getServer().getOverworld().getTime());
             }
         });
 
@@ -180,10 +179,10 @@ public class ItemSpeedrunEvents {
                 for (int i = 0; i < predicates.size(); i++) {
                     SingleSpeedrunPredicate predicate = predicates.get(i);
                     if (predicate.fitsAdvancementGet(advancement)) {
-                        if (!COLLECTED_ONE_EVENT.invoker().onCollect(Either.right(advancement), predicate.getIcon(), player, rec).isFalse()) {
-                            long time = player.server.getOverworld().getTime();
-                            PlayerManager playerManager = player.server.getPlayerManager();
-                            setAndAnnounceCollectedOne(player, rec, predicate.getIcon(), null, i, time, playerManager);
+                        if (!COLLECTED_ONE_EVENT.invoker().onCollect(Either.right(advancement), predicate.icon(), player, rec).isFalse()) {
+                            long time = player.getServer().getOverworld().getTime();
+                            PlayerManager playerManager = player.getServer().getPlayerManager();
+                            setAndAnnounceCollectedOne(player, rec, predicate.icon(), null, i, time, playerManager);
                         }
                     }
                 }
@@ -195,11 +194,11 @@ public class ItemSpeedrunEvents {
             MultiplayerRecords.tickInvitations();
         });
 
-        COLLECTED_ONE_EVENT.register((obj, icon, player, record) -> COLLECTED_ITEM_EVENT.invoker().onCollect(obj, player, record));
+        //COLLECTED_ONE_EVENT.register((obj, icon, player, record) -> COLLECTED_ITEM_EVENT.invoker().onCollect(obj, player, record));
 
         FINISH_RECORD_EVENT.register((player, record, gameTime) -> {
             // TODO change broadcast to partial (players not involved will not receive broadcasts)
-            var mgr = player.server.getPlayerManager();
+            var mgr = player.getServer().getPlayerManager();
             mgr.broadcast(ItemRecordMessages.itemCompleted(player, record, gameTime), false);
             if (!record.isCoop()) {
                 player.alphabetSpeedrun$moveRecordToHistory();
@@ -254,7 +253,8 @@ public class ItemSpeedrunEvents {
 
     public static void onItemPickup(ServerPlayerEntity player, ItemStack stack) {
         if (stack.isEmpty()) return;
-        final MinecraftServer server = player.server;
+        final MinecraftServer server = player.getServer();
+        Objects.requireNonNull(server);
         final ItemRecordAccess record = player.alphabetSpeedrun$getItemRecordAccess();
         if (record != null) {
             //final Identifier id = Registry.ITEM.getId(stack.getItem());
@@ -265,10 +265,10 @@ public class ItemSpeedrunEvents {
                 if (record.isRequirementPassed(i)) continue;
                 SingleSpeedrunPredicate requirement = predicates.get(i);
                 if (requirement.testItemStack(stack)) {
-                    if (!COLLECTED_ONE_EVENT.invoker().onCollect(Either.left(stack), requirement.getIcon(), player, record).isFalse()) {
+                    if (!COLLECTED_ONE_EVENT.invoker().onCollect(Either.left(stack), requirement.icon(), player, record).isFalse()) {
                         final long time = server.getOverworld().getTime();
                         final PlayerManager mgr = server.getPlayerManager();
-                        setAndAnnounceCollectedOne(player, record, requirement.getIcon(), stack, i, time, mgr);
+                        setAndAnnounceCollectedOne(player, record, requirement.icon(), stack, i, time, mgr);
                         tryFinishRecord(record, time, player);
                     }
                 }
@@ -303,14 +303,5 @@ public class ItemSpeedrunEvents {
                             size -> IntStream.range(0, size).mapToObj($$ -> PacketUtil.readItemStack(buf)).collect(Collectors.toList()))
             )
     );
-
-    @FunctionalInterface
-    @Deprecated(forRemoval = true)
-    public interface CollectedItem {
-        EventResult onCollect(Either<ItemStack, Advancement> obj, ServerPlayerEntity player, ItemRecordAccess record);
-    }
-
-    @Deprecated(forRemoval = true)
-    public static final Event<CollectedItem> COLLECTED_ITEM_EVENT = EventFactory.createEventResult();
 
 }

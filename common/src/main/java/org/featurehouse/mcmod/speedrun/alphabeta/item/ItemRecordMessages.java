@@ -18,21 +18,22 @@
 
 package org.featurehouse.mcmod.speedrun.alphabeta.item;
 
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.NbtComponent;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.PlayerManager;
-import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @ApiStatus.Internal
-// TODO #3: enhanced item record messages
 public final class ItemRecordMessages {
 
     public static Text itemCollected(PlayerEntity player, ItemStack displayedStack,
@@ -45,19 +46,17 @@ public final class ItemRecordMessages {
         RecordSnapshot record1 = RecordSnapshot.fromRecord(record, currentTime);
         final Text time = time(record1.duration());
         if (actualStack != null) {
-            final NbtCompound nbt = actualStack.getNbt();
-            if (nbt != null) {
-                switch (nbt.getByte("AlphabetSpeedrunDisplaysReal")) {
-                    case 1 -> {
-                        final Text actualName = actualStack.toHoverableText();
-                        return Text.translatable("message.speedrun.alphabet.item.collected.with_actual",
-                                entityName, itemName, size0, size1, time, record1.asText(), actualName);
-                    }
-                    case 2 -> {
-                        final Text actualName = actualStack.toHoverableText();
-                        return Text.translatable("message.speedrun.alphabet.item.collected.actual_only",
-                                entityName, actualName, size0, size1, time, record1.asText());
-                    }
+            final NbtCompound nbt = Optional.ofNullable(actualStack.get(DataComponentTypes.CUSTOM_DATA)).map(NbtComponent::copyNbt).orElse(new NbtCompound());
+            switch (nbt.getByte("AlphabetSpeedrunDisplaysReal").orElse((byte) 0)) {
+                case 1 -> {
+                    final Text actualName = actualStack.toHoverableText();
+                    return Text.translatable("message.speedrun.alphabet.item.collected.with_actual",
+                            entityName, itemName, size0, size1, time, record1.asText(), actualName);
+                }
+                case 2 -> {
+                    final Text actualName = actualStack.toHoverableText();
+                    return Text.translatable("message.speedrun.alphabet.item.collected.actual_only",
+                            entityName, actualName, size0, size1, time, record1.asText());
                 }
             }
         }
@@ -102,15 +101,15 @@ public final class ItemRecordMessages {
     }
 
     public static void sendSound(PlayerManager mgr, SoundEvent sound) {
-        mgr.getPlayerList().forEach(p -> p.playSound(sound, SoundCategory.AMBIENT, .8F, 1.0F));
+        mgr.getPlayerList().forEach(p -> p.playSound(sound, .8F, 1.0F));
     }
 
     public static void sendWinSound(PlayerEntity winner, PlayerManager mgr) {
         mgr.getPlayerList().forEach(p -> {
             if (p != winner) {
-                p.playSound(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.AMBIENT, .8F, 1.0F);
+                p.playSound(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, .8F, 1.0F);
             } else {
-                p.playSound(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundCategory.AMBIENT, .8F, 1.0F);
+                p.playSound(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, .8F, 1.0F);
             }
         });
     }

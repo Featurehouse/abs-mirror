@@ -23,21 +23,23 @@ import net.minecraft.registry.CombinedDynamicRegistries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.util.WorldSavePath;
-import net.minecraft.world.WorldSaveHandler;
+import net.minecraft.world.PlayerSaveHandler;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.coop.CoopRecordManager;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.coop.CoopablePlayerList;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Coerce;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(PlayerManager.class)
 abstract class PlayerListMixin implements CoopablePlayerList {
-    @DontObfuscate private CoopRecordManager alphabetSpeedrun$coopRecordManager;
+    @DontObfuscate
+    @Unique
+    private CoopRecordManager alphabetSpeedrun$coopRecordManager;
 
     @Inject(at = @At("RETURN"), method = "<init>")
-    private void postInit(MinecraftServer server, @Coerce Object arg2, WorldSaveHandler saveHandler, int maxPlayers, CallbackInfo ci) {
+    private void postInit(MinecraftServer server, CombinedDynamicRegistries<?> registryManager, PlayerSaveHandler saveHandler, int maxPlayers, CallbackInfo ci) {
         alphabetSpeedrun$coopRecordManager = new CoopRecordManager(server.getSavePath(WorldSavePath.ROOT).resolve("alphabet-speedrun-records/coop/item"));
     }
 

@@ -19,18 +19,18 @@
 package org.featurehouse.mcmod.speedrun.alphabeta.item;
 
 import com.google.gson.*;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.logging.LogUtils;
-import net.minecraft.item.Item;
+import com.mojang.serialization.JsonOps;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.StringNbtReader;
-import net.minecraft.resource.JsonDataLoader;
+import net.minecraft.resource.ResourceFinder;
 import net.minecraft.resource.ResourceManager;
+import net.minecraft.resource.SinglePreparationResourceReloader;
 import net.minecraft.text.Text;
+import net.minecraft.text.TextCodecs;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
 import net.minecraft.util.profiler.Profiler;
+import org.featurehouse.mcmod.speedrun.alphabeta.util.JsonYYDS;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -57,15 +57,15 @@ public record ItemSpeedrun(
         return DataLoader.getCurrentData().get(id);
     }
 
-    public static class DataLoader extends JsonDataLoader {
+    public static class DataLoader extends SinglePreparationResourceReloader<Map<Identifier, JsonElement>> {
         private static Map<Identifier, ItemSpeedrun> currentData;
         private static final Logger LOGGER = LogUtils.getLogger();
 
-        private static final Gson GSON = new Gson();
         private static final Object LOCK = new Object();
 
-        public DataLoader() {
-            super(GSON, "speedrun_goals/item");
+        @Override
+        protected Map<Identifier, JsonElement> prepare(ResourceManager manager, Profiler profiler) {
+            return JsonYYDS.loadJsonResources(manager, ResourceFinder.json("speedrun_goals/item"));
         }
 
         @Override
@@ -74,7 +74,7 @@ public record ItemSpeedrun(
             prepared.forEach((id, json) -> {
                 final JsonObject root = JsonHelper.asObject(json, id.toString());
                 ItemStack icon = iconFromJson(JsonHelper.getObject(root, "icon"));
-                Text display = Text.Serializer.fromJson(Objects.requireNonNull(root.get("display")));
+                Text display = TextCodecs.CODEC.parse(JsonOps.INSTANCE, Objects.requireNonNull(root.get("display"))).getOrThrow(JsonParseException::new);
                 //TagKey<Item> tagKey = TagKey.of(Registry.ITEM_KEY, Identifier.of(JsonHelper.getString(root, "items")));
                 List<ItemPredicateProvider> providers = ItemPredicateProvider.fromJson(Objects.requireNonNull(root.get("items")));
                 m.put(id, new ItemSpeedrun(id, icon, display, providers));
@@ -96,26 +96,9 @@ public record ItemSpeedrun(
         }
 
         static ItemStack iconFromJson(JsonObject json) {
-            if (!json.has("item")) {
-                throw new JsonSyntaxException("Unsupported icon type, currently only items are supported (add 'item' key)");
-            } else {
-                Item item = JsonHelper.getItem(json, "item");
-                if (json.has("data")) {
-                    throw new JsonParseException("Disallowed data tag found");
-                } else {
-                    ItemStack itemStack = new ItemStack(item);
-                    if (json.has("nbt")) {
-                        try {
-                            NbtCompound nbtCompound = StringNbtReader.parse(JsonHelper.asString(json.get("nbt"), "nbt"));
-                            itemStack.setNbt(nbtCompound);
-                        } catch (CommandSyntaxException var4) {
-                            throw new JsonSyntaxException("Invalid nbt tag: " + var4.getMessage());
-                        }
-                    }
-
-                    return itemStack;
-                }
-            }
+            ItemStack stack = ItemStack.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow(JsonParseException::new);
+            stack.setCount(1);
+            return stack;
         }
     }
 }

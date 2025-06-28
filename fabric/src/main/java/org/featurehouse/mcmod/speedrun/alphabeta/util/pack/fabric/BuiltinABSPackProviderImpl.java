@@ -43,7 +43,7 @@ public class BuiltinABSPackProviderImpl {
     public static void registerPacks() {
         for (String s : BuiltinABSPackProvider.SUB_PATHS.get()) {
             ResourceManagerHelper.registerBuiltinResourcePack(
-                    new Identifier("alphabet_speedrun", s),
+                    Identifier.of("alphabet_speedrun", s),
                     MOD.get(),
                     ResourcePackActivationType.DEFAULT_ENABLED);
         }

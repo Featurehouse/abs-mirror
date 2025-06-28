@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.gson.*;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.JsonOps;
-import net.minecraft.advancement.Advancement;
+import net.minecraft.advancement.AdvancementEntry;
 import net.minecraft.component.ComponentChanges;
 import net.minecraft.component.ComponentMap;
 import net.minecraft.component.ComponentType;
@@ -298,7 +298,7 @@ public sealed interface ItemPredicateProvider {
             public Stream<SingleSpeedrunPredicate> flatMaps() {
                 return wrapped().flatMaps().map(p -> {
                     final ItemStack icon = this.icon().copy();
-                    final ItemStack right = p.getIcon();
+                    final ItemStack right = p.icon();
 
                     this.iconState().accept(icon, right);
                     return new SingleSpeedrunPredicate() {
@@ -308,20 +308,25 @@ public sealed interface ItemPredicateProvider {
                         }
 
                         @Override
-                        public boolean fitsAdvancementGet(Advancement advancement) {
+                        public boolean fitsAdvancementGet(AdvancementEntry advancement) {
                             return p.fitsAdvancementGet(advancement);
                         }
 
                         @Override
-                        public ItemStack getIcon() {
+                        public ItemStack icon() {
                             return icon;
                         }
 
                         @Override
                         public JsonObject serialize() {
                             JsonObject obj = p.serialize();
-                            obj.add("icon", ItemSpeedrunRecord.stackToJson(icon));
+                            obj.add("icon", ItemStack.CODEC.encodeStart(JsonOps.INSTANCE, icon).getOrThrow());
                             return obj;
+                        }
+
+                        @Override
+                        public String predicateType() {
+                            return p.predicateType();
                         }
                     };
                 });

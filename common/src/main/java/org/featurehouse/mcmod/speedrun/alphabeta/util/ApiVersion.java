@@ -21,6 +21,6 @@ package org.featurehouse.mcmod.speedrun.alphabeta.util;
 @SuppressWarnings("unused")
 public interface ApiVersion {
     static String getVersion() {
-        return "0.0-SNAPSHOT";
+        return "4.0-SNAPSHOT";
     }
 }
