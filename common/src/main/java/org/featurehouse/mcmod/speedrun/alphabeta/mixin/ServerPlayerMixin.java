@@ -19,9 +19,12 @@
 package org.featurehouse.mcmod.speedrun.alphabeta.mixin;
 
 import com.google.gson.JsonObject;
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.JsonOps;
 import net.minecraft.obfuscate.DontObfuscate;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.GsonHelper;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.level.storage.ValueInput;
@@ -36,6 +39,8 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import java.util.function.Function;
 
 @Mixin(ServerPlayer.class)
 public abstract class ServerPlayerMixin extends Player implements ItemCollector, InternalItemCollector {
@@ -64,21 +69,29 @@ public abstract class ServerPlayerMixin extends Player implements ItemCollector,
 
     @Inject(method = "readAdditionalSaveData", at = @At("RETURN"))
     private void onReadFromNbt(ValueInput view, CallbackInfo ci) {
-        try {
-            this.alphabetSpeedrun$currentRecord = JsonYYDS.getFromReadView(view, "AlphabetSpeedrun_CurrentRecord")
-                    .map(obj -> ItemRecordAccess.fromJsonMeta(obj, CoopRecordManager.fromServer(alphabetSpeedrun$getServer())))
-                    .orElse(null);
-        } catch (RuntimeException e) {
-            ItemSpeedrunEvents.LOGGER.error("Failed to read player custom data from {}", this.stringUUID, e);
-        }
+        this.alphabetSpeedrun$currentRecord = JsonYYDS.getFromReadView(view, "AlphabetSpeedrun_CurrentRecord")
+                .map(obj -> ItemRecordAccess.metaCodec(CoopRecordManager.fromServer(alphabetSpeedrun$getServer()))
+                        .parse(JsonOps.INSTANCE, obj)
+                        .mapOrElse(Function.identity(), e -> {
+                            ItemSpeedrunEvents.LOGGER.error("Failed to read player custom data from {}: {}", this.stringUUID, e.message());
+                            return null;
+                        })
+                ).orElse(null);
         this.alphabetSpeedrun$itemRecordHistory = JsonYYDS.getFromReadView(view, "AlphabetSpeedrun_HistoryRecord").orElse(null);
     }
 
     @Inject(method = "addAdditionalSaveData", at = @At("RETURN"))
     private void onWriteToNbt(ValueOutput view, CallbackInfo ci) {
         if (alphabetSpeedrun$currentRecord != null) {
-            JsonYYDS.writeToWriteView(alphabetSpeedrun$currentRecord.toJsonMeta(), view, "AlphabetSpeedrun_CurrentRecord");
+            JsonObject jsonMeta = GsonHelper.convertToJsonObject(ItemRecordAccess.metaCodec(CoopRecordManager.fromServer(alphabetSpeedrun$getServer()))
+                    .encodeStart(JsonOps.INSTANCE, alphabetSpeedrun$currentRecord)
+                    .mapOrElse(Function.identity(), e -> {
+                        ItemSpeedrunEvents.LOGGER.error("Failed to write player custom data to {}: {}", this.stringUUID, e.message());
+                        return null;
+                    }), "AlphabetSpeedrun_CurrentRecord");
+            JsonYYDS.writeToWriteView(jsonMeta, view, "AlphabetSpeedrun_CurrentRecord");
         }
+
         if (this.alphabetSpeedrun$itemRecordHistory != null) {
             JsonYYDS.writeToWriteView(alphabetSpeedrun$itemRecordHistory, view, "AlphabetSpeedrun_HistoryRecord");
         }
@@ -87,16 +100,30 @@ public abstract class ServerPlayerMixin extends Player implements ItemCollector,
     @Override
     public boolean alphabetSpeedrun$moveRecordToHistory() {
         if (alphabetSpeedrun$currentRecord == null || alphabetSpeedrun$currentRecord.isCoop()) return false;
-        alphabetSpeedrun$itemRecordHistory = alphabetSpeedrun$currentRecord.toJson();
-        alphabetSpeedrun$currentRecord = null;
+        ItemRecordAccess.metaCodec(CoopRecordManager.fromServer(alphabetSpeedrun$getServer())).encodeStart(JsonOps.INSTANCE, alphabetSpeedrun$currentRecord)
+                .flatMap(e -> {
+                    if (!e.isJsonObject()) return DataResult.error(() -> "Not a JSON object");
+                    return DataResult.success(e.getAsJsonObject());
+                })
+                .ifError(e -> ItemSpeedrunEvents.LOGGER.error("Failed to move record to history for {}: {}", this.stringUUID, e.message()))
+                .ifSuccess(obj -> {
+                    alphabetSpeedrun$itemRecordHistory = obj;
+                    alphabetSpeedrun$currentRecord = null;
+                });
         return true;
     }
 
     @Override
     public boolean alphabetSpeedrun$resumeLocalHistory() {
         if (alphabetSpeedrun$itemRecordHistory == null) return false;
-        alphabetSpeedrun$currentRecord = ItemSpeedrunRecord.fromJson(alphabetSpeedrun$itemRecordHistory, false);
-        alphabetSpeedrun$itemRecordHistory = null;
+        
+        ItemSpeedrunRecord.CODEC.parse(JsonOps.INSTANCE, alphabetSpeedrun$itemRecordHistory)
+                .ifError(e -> ItemSpeedrunEvents.LOGGER.error("Failed to resume local history for {}: {}", this.stringUUID, e.message()))
+                .ifSuccess(r -> {
+                    alphabetSpeedrun$currentRecord = r;
+                    alphabetSpeedrun$itemRecordHistory = null;
+                });
+        
         return true;
     }
 
@@ -107,8 +134,8 @@ public abstract class ServerPlayerMixin extends Player implements ItemCollector,
 
     @Override
     public ItemSpeedrunRecord alphabetSpeedrun$getHistory() {
-        return alphabetSpeedrun$itemRecordHistory == null ? null :
-                ItemSpeedrunRecord.fromJson(alphabetSpeedrun$itemRecordHistory, false);
+        if (alphabetSpeedrun$itemRecordHistory == null) return null;
+        return ItemSpeedrunRecord.CODEC.parse(JsonOps.INSTANCE, alphabetSpeedrun$itemRecordHistory).getOrThrow();
     }
 
     @Inject(at = @At("RETURN"), method = "initMenu")

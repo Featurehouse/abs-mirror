@@ -18,15 +18,17 @@
 
 package org.featurehouse.mcmod.speedrun.alphabeta.item.coop;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.mojang.serialization.*;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.UUIDUtil;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.ItemSpeedrunRecord;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.SingleSpeedrunPredicate;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.difficulty.ItemSpeedrunDifficulty;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -36,10 +38,10 @@ import net.minecraft.world.item.ItemStack;
 
 public class CoopRecord implements CoopRecordAccess {
     private final ItemSpeedrunRecord wrapped;
-    private final Collection<UUID> operators;
-    private final Collection<UUID> players;
+    private final List<UUID> operators;
+    private final List<UUID> players;
 
-    public CoopRecord(ItemSpeedrunRecord wrapped, Collection<UUID> operators, Collection<UUID> players) {
+    public CoopRecord(ItemSpeedrunRecord wrapped, List<UUID> operators, List<UUID> players) {
         this.wrapped = wrapped;
         this.operators = operators;
         this.players = players;
@@ -64,7 +66,7 @@ public class CoopRecord implements CoopRecordAccess {
 
     ///////////
 
-    public Collection<UUID> getPlayers() {
+    public List<UUID> getPlayers() {
         return players;
     }
 
@@ -78,7 +80,7 @@ public class CoopRecord implements CoopRecordAccess {
         return wrapped.goalId();
     }
 
-    public Collection<UUID> getOperators() {
+    public List<UUID> getOperators() {
         return operators;
     }
 
@@ -167,13 +169,6 @@ public class CoopRecord implements CoopRecordAccess {
         return wrapped.getCollectedCount();
     }
 
-    public JsonObject toJsonMeta() {
-        final JsonObject obj = new JsonObject();
-        obj.addProperty("is_coop", true);
-        obj.addProperty("coop_uuid", this.recordId().toString());
-        return obj;
-    }
-
     public static @Nullable CoopRecordAccess tryParseMeta(CoopRecordManager manager, JsonObject obj) {
         if (!GsonHelper.getAsBoolean(obj, "is_coop", false))
             return null;
@@ -181,36 +176,25 @@ public class CoopRecord implements CoopRecordAccess {
         return manager.get(uuid);
     }
 
-    @Override
-    public JsonObject toJson() {
-        final JsonObject obj = new JsonObject();
-        JsonArray arr = new JsonArray();
-        for (UUID operator : operators)
-            arr.add(operator.toString());
-        obj.add("operators", arr);
-        arr = new JsonArray();
-        for (UUID player : players)
-            arr.add(player.toString());
-        obj.add("player", arr);
-        obj.add("record", wrapped.toJson());
-        return obj;
+    public static MapCodec<CoopRecordAccess> metaCodec(CoopRecordManager manager) {
+        return RecordCodecBuilder.mapCodec(
+                instance -> instance.group(
+                        UUIDUtil.STRING_CODEC.xmap(manager::get, CoopRecordAccess::recordId).fieldOf("coop_uuid").forGetter(Function.identity())
+                ).apply(instance, Function.identity())
+        );
     }
+
+    public static final Codec<CoopRecord> CODEC = RecordCodecBuilder.create(
+            instance -> instance.group(
+                    ItemSpeedrunRecord.CODEC.fieldOf("record").forGetter(r -> r.wrapped),
+                    UUIDUtil.STRING_CODEC.listOf().fieldOf("operators").forGetter(CoopRecord::getOperators),
+                    UUIDUtil.STRING_CODEC.listOf().fieldOf("player").forGetter(CoopRecord::getPlayers)
+            ).apply(instance, CoopRecord::new)
+    );
 
     @Override
     public long timeSince(long current) {
         return wrapped.timeSince(current);
-    }
-
-    public static CoopRecord fromJson(@NotNull JsonObject obj) {
-        Objects.requireNonNull(obj);
-        final Set<UUID> operators = new HashSet<>();
-        GsonHelper.getAsJsonArray(obj, "operators").forEach(e ->
-                operators.add(UUID.fromString(GsonHelper.convertToString(e, "uuid"))));
-        final Set<UUID> players = new HashSet<>();
-        GsonHelper.getAsJsonArray(obj, "players").forEach(e ->
-                players.add(UUID.fromString(GsonHelper.convertToString(e, "uuid"))));
-        ItemSpeedrunRecord record = ItemSpeedrunRecord.fromJson(obj.get("record"), false);
-        return new CoopRecord(record, operators, players);
     }
 
     @Override

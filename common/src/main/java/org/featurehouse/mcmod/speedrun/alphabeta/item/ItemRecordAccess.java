@@ -19,7 +19,7 @@
 package org.featurehouse.mcmod.speedrun.alphabeta.item;
 
 import com.google.common.base.Preconditions;
-import com.google.gson.JsonObject;
+import com.mojang.serialization.Codec;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.coop.CoopRecord;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.coop.CoopRecordAccess;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.coop.CoopRecordManager;
@@ -59,10 +59,14 @@ public interface ItemRecordAccess {
         }
     }
 
-    static ItemRecordAccess fromJsonMeta(JsonObject obj, CoopRecordManager coopMgr) {
-        var coop = CoopRecord.tryParseMeta(coopMgr, obj);
-        if (coop != null) return coop;
-        return ItemSpeedrunRecord.fromJson(obj, false);
+    static Codec<ItemRecordAccess> metaCodec(CoopRecordManager coopMgr) {
+        return Codec.BOOL.orElse(Boolean.FALSE).dispatch("is_coop", ItemRecordAccess::isCoop, isCoop -> {
+            if (isCoop) {
+                return CoopRecord.metaCodec(coopMgr);
+            } else {
+                return ItemSpeedrunRecord.MAP_CODEC;
+            }
+        });
     }
 
     List<ItemStack> displayedStacks();
@@ -72,7 +76,7 @@ public interface ItemRecordAccess {
     boolean isRequirementPassed(int idx);
     void setRequirementPassedTime(int index, long time);
     int getCollectedCount();
-    JsonObject toJson();
+
     long timeSince(long current);
     ResourceLocation goalId();
     UUID recordId();
@@ -92,7 +96,6 @@ public interface ItemRecordAccess {
     default CoopRecordAccess asCoop() throws IllegalStateException {
         throw new IllegalStateException();
     }
-    default JsonObject toJsonMeta() { return toJson(); }
 
     Collection<ServerPlayer> getMates(PlayerList manager, @Nullable ServerPlayer self);
     void onStart(ServerPlayer player);

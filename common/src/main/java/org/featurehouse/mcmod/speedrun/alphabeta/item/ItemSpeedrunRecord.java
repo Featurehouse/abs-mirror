@@ -19,9 +19,10 @@
 package org.featurehouse.mcmod.speedrun.alphabeta.item;
 
 import com.google.common.collect.Maps;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.UUIDUtil;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.command.Draft;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.command.ItemSpeedrunCommandHandle;
@@ -31,12 +32,13 @@ import org.featurehouse.mcmod.speedrun.alphabeta.util.MixinSensitive;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.LongStream;
+
 import net.minecraft.ChatFormatting;
 import net.minecraft.Util;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
-import net.minecraft.util.GsonHelper;
 import net.minecraft.world.item.ItemStack;
 
 @MixinSensitive
@@ -68,6 +70,23 @@ public final class ItemSpeedrunRecord implements ItemRecordAccess {
         Arrays.fill(l, -1);
         return l;
     }
+
+    public static final MapCodec<ItemSpeedrunRecord> MAP_CODEC = RecordCodecBuilder.mapCodec(
+            instance -> instance.group(
+                    ResourceLocation.CODEC.fieldOf("goal_id").forGetter(ItemSpeedrunRecord::goalId),
+                    UUIDUtil.STRING_CODEC.fieldOf("record_id").forGetter(ItemSpeedrunRecord::recordId),
+                    SingleSpeedrunPredicate.CODEC.listOf().fieldOf("predicates").forGetter(ItemSpeedrunRecord::predicates),
+                    Codec.LONG_STREAM.xmap(LongStream::toArray, Arrays::stream).fieldOf("collected").forGetter(ItemSpeedrunRecord::collected),
+                    Codec.LONG.fieldOf("start_time").forGetter(ItemSpeedrunRecord::startTime),
+                    Codec.LONG.fieldOf("finish_time").orElse(-1L).forGetter(ItemSpeedrunRecord::finishTime),
+                    Codec.LONG.fieldOf("last_quit_time").orElse(-1L).forGetter(ItemSpeedrunRecord::lastQuitTime),
+                    Codec.LONG.fieldOf("vacant_time").orElse(0L).forGetter(ItemSpeedrunRecord::vacantTime),
+                    ResourceLocation.CODEC.xmap(DefaultItemSpeedrunDifficulty::getDifficulty, ItemSpeedrunDifficulty::getId).fieldOf("difficulty").orElseGet(() -> DefaultItemSpeedrunDifficulty.NN).forGetter(ItemSpeedrunRecord::difficulty),
+                    Codec.unboundedMap(UUIDUtil.STRING_CODEC, UUIDUtil.STRING_CODEC).fieldOf("pvp_mates").orElseGet(Maps::newLinkedHashMap).forGetter(ItemSpeedrunRecord::mates)
+            ).apply(instance, ItemSpeedrunRecord::new)
+    );
+
+    public static final Codec<ItemSpeedrunRecord> CODEC = MAP_CODEC.codec();
 
     ItemSpeedrunRecord(
             ResourceLocation goalId,
@@ -131,65 +150,22 @@ public final class ItemSpeedrunRecord implements ItemRecordAccess {
         return c;
     }
 
-    // Serializations START
-    public JsonObject toJson() {
-        JsonObject obj = new JsonObject();
-        obj.addProperty("goal_id", goalId().toString());
-        obj.addProperty("record_id", recordId().toString());
-        JsonArray col = new JsonArray();
-        Arrays.stream(collected()).forEach(col::add);
-        obj.add("collected", col);
-        obj.addProperty("start_time", startTime());
-        //obj.addProperty("finish_time", finishTime == null ? -1 : finishTime);
-        obj.addProperty("finish_time", finishTime);
-        JsonArray dps = new JsonArray();
-        predicates.forEach(p -> dps.add(p.serialize()));
-        //displayedStacks.forEach(i -> dps.add(stackToJson(i)));
-        obj.add("predicates", dps);
-        obj.addProperty("last_quit_time", lastQuitTime);
-        obj.addProperty("vacant_time", vacantTime);
-        obj.addProperty("difficulty", difficulty.getId().toString());
-        JsonObject mates = new JsonObject();
-        this.mates.forEach((playerId, recId) -> mates.addProperty(playerId.toString(), recId.toString()));
-        obj.add("pvp_mates_v2", mates);
-        return obj;
+    public ItemSpeedrunRecord resetUuid() {
+        // Shallow copy
+        UUID uuid = UUID.randomUUID();
+        return new ItemSpeedrunRecord(
+                goalId,
+                uuid,
+                predicates,
+                collected,
+                startTime,
+                finishTime,
+                lastQuitTime,
+                vacantTime,
+                difficulty,
+                mates
+        );
     }
-
-    public static ItemSpeedrunRecord fromJson(JsonElement element, boolean resetUuid) {
-        JsonObject root = GsonHelper.convertToJsonObject(element, "root");
-        ResourceLocation goalId = ResourceLocation.parse(GsonHelper.getAsString(root, "goal_id"));
-        UUID recordId = resetUuid ? UUID.randomUUID() : UUID.fromString(GsonHelper.getAsString(root, "record_id"));
-        JsonArray arr;
-
-        List<SingleSpeedrunPredicate> itemPredicates;
-        arr = GsonHelper.getAsJsonArray(root, "predicates");
-        itemPredicates = new ArrayList<>(arr.size());
-        arr.forEach(e -> itemPredicates.add(SingleSpeedrunPredicate.deserialize(GsonHelper.convertToJsonObject(e, "predicate"))));
-
-
-        arr = GsonHelper.getAsJsonArray(root, "collected");
-        long[] collected = new long[arr.size()];
-        for (int i = 0; i < arr.size(); i++)
-            collected[i] = (GsonHelper.convertToLong(arr.get(i), "collected[" + i + ']'));
-        collected = Arrays.copyOf(collected, itemPredicates.size());
-        long startTime = GsonHelper.getAsLong(root, "start_time");
-        long finishTime = GsonHelper.getAsLong(root, "finish_time", -1);
-        long lastQuitTime = GsonHelper.getAsLong(root, "last_quit_time", -1);
-        long vacantTime = GsonHelper.getAsLong(root, "vacant_time", 0);
-        JsonObject obj = GsonHelper.getAsJsonObject(root, "pvp_mates_v2", null);
-        final Map<UUID, UUID> mates = Maps.newHashMap();
-        if (obj != null) {
-            obj.entrySet().forEach(e -> mates.put(UUID.fromString(e.getKey()),
-                    UUID.fromString(GsonHelper.convertToString(e.getValue(), "mate_record_uuid"))));
-            //obj.forEach(e -> mates.add(UUID.fromString(JsonHelper.asString(e, "uuid"))));
-        }
-
-        ItemSpeedrunDifficulty difficulty1 = DefaultItemSpeedrunDifficulty.getDifficulty(ResourceLocation.parse(GsonHelper.getAsString(root, "difficulty", "speedabc:empty")));
-        return new ItemSpeedrunRecord(goalId, recordId, itemPredicates, collected,
-                startTime, finishTime, lastQuitTime, vacantTime, difficulty1, mates);
-    }
-
-    // Serializations END
 
     public long timeSince(long current) {
         long l = this.finishTime();

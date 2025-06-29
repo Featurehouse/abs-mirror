@@ -35,16 +35,4 @@ public interface InternalItemCollector extends ItemCollector {
     @ApiStatus.Internal
     @DontObfuscate
     default JsonObject alphabetSpeedrun$internal$getHistoryRaw() { throw new AssertionError(); }
-
-    @Override
-    @Deprecated
-    default ItemSpeedrunRecord alphabetSpeedrun$getItemRecord() {
-        return alphabetSpeedrun$getItemRecordAccess() instanceof ItemSpeedrunRecord r ? r : null;
-    }
-
-    @Override
-    @Deprecated
-    default void alphabetSpeedrun$setItemRecord(ItemSpeedrunRecord record) {
-        alphabetSpeedrun$setItemRecordAccess(record);
-    }
 }

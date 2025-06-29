@@ -22,6 +22,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.mojang.datafixers.util.Either;
 import com.mojang.logging.LogUtils;
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.JsonOps;
 import net.minecraft.server.MinecraftServer;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.ItemRecordAccess;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.StoredItemRecords;
@@ -79,7 +81,8 @@ public class CoopRecordManager implements SavableResource {
         try (var reader = Files.newBufferedReader(p)) {
             root = GSON.fromJson(reader, JsonObject.class);
         }
-        CoopRecord e = CoopRecord.fromJson(root);
+        final CoopRecord e = CoopRecord.CODEC.parse(JsonOps.INSTANCE, root).getOrThrow();
+
         e.getPlayers().clear();
         synchronized (this) {
             inMemoryRecords.put(e.recordId(), e);
@@ -111,7 +114,11 @@ public class CoopRecordManager implements SavableResource {
 
     public void save() throws IOException {
         for (ItemRecordAccess rec : inMemoryRecords.values()) {
-            JsonObject json = rec.toJson();
+            JsonObject json = ItemRecordAccess.metaCodec(this).encodeStart(JsonOps.INSTANCE, rec).flatMap(e -> {
+                if (!e.isJsonObject()) return DataResult.error(() -> "Not a JSON object");
+                return DataResult.success(e.getAsJsonObject());
+            }).getOrThrow();
+
             try (var writer = Files.newBufferedWriter(getPath(rec.recordId()))) {
                 GSON.toJson(json, writer);
             }

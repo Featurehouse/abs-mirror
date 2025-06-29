@@ -18,16 +18,15 @@
 
 package org.featurehouse.mcmod.speedrun.alphabeta.item.coop;
 
-import com.google.gson.JsonObject;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.ItemRecordAccess;
 
-import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 import net.minecraft.server.level.ServerPlayer;
 
 public interface CoopRecordAccess extends ItemRecordAccess {
-    Collection<UUID> getPlayers();
-    Collection<UUID> getOperators();
+    List<UUID> getPlayers();
+    List<UUID> getOperators();
 
     default boolean isOp(ServerPlayer player) {
         return getOperators().contains(player.getUUID());
@@ -37,8 +36,6 @@ public interface CoopRecordAccess extends ItemRecordAccess {
     default CoopRecordAccess asCoop() throws IllegalStateException {
         return this;
     }
-
-    JsonObject toJsonMeta();
 
     @Override
     default boolean isCoop() {

@@ -272,7 +272,6 @@ public final class ItemSpeedrunCommandHandle {
                     // Not allowed
                 }
             };
-            //org.featurehouse.mcmod.speedrun.alphabeta.util.AlphaBetaDebug.log(logger -> logger.info(java.util.Arrays.toString(java.util.stream.IntStream.range(0, sync.getListSize()).mapToObj(sync::getBit).toArray())));
             return new ItemListViewMenu(syncId, iconList, true, sync, record.recordId());
         }, goal.display()), buf -> {
             buf.writeVarInt(size);

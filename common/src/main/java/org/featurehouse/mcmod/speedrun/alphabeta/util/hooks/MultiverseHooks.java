@@ -26,7 +26,6 @@ import net.minecraft.obfuscate.DontObfuscate;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
-import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import org.jetbrains.annotations.ApiStatus;
 
@@ -62,10 +61,5 @@ public class MultiverseHooks {
     @DontObfuscate  // ()#3: getstatic #0 #12 #3; areturn
     public static ResourceKey<Registry<Item>> itemKey() {
         return Registries.ITEM;
-    }
-
-    @DontObfuscate  // ()#3: getstatic #0 #14 #3; areturn
-    public static ResourceKey<Registry<MenuType<?>>> menuKey() {
-        return Registries.MENU;
     }
 }

@@ -18,28 +18,22 @@
 
 package org.featurehouse.mcmod.speedrun.alphabeta.item;
 
-import com.mojang.blaze3d.Blaze3D;
 import com.mojang.datafixers.util.Either;
 import com.mojang.logging.LogUtils;
 import dev.architectury.event.Event;
 import dev.architectury.event.EventFactory;
 import dev.architectury.event.EventResult;
-import dev.architectury.event.events.client.ClientGuiEvent;
-import dev.architectury.event.events.client.ClientPlayerEvent;
 import dev.architectury.event.events.common.CommandRegistrationEvent;
 import dev.architectury.event.events.common.PlayerEvent;
 import dev.architectury.event.events.common.TickEvent;
 import dev.architectury.networking.NetworkManager;
-import dev.architectury.platform.Platform;
 import dev.architectury.registry.ReloadListenerRegistry;
 import dev.architectury.registry.menu.MenuRegistry;
 import dev.architectury.registry.registries.DeferredRegister;
 import dev.architectury.registry.registries.RegistrySupplier;
-import dev.architectury.utils.Env;
 import net.minecraft.ChatFormatting;
 import net.minecraft.advancements.AdvancementHolder;
-import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -59,11 +53,9 @@ import org.featurehouse.mcmod.speedrun.alphabeta.item.menu.ItemListViewMenu;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.components.FireworkElytraUtils;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.menu.OpenItemListPayload;
 import org.featurehouse.mcmod.speedrun.alphabeta.util.PacketUtil;
-import org.featurehouse.mcmod.speedrun.alphabeta.util.hooks.MultiverseHooks;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -194,8 +186,6 @@ public class ItemSpeedrunEvents {
             MultiplayerRecords.tickInvitations();
         });
 
-        //COLLECTED_ONE_EVENT.register((obj, icon, player, record) -> COLLECTED_ITEM_EVENT.invoker().onCollect(obj, player, record));
-
         FINISH_RECORD_EVENT.register((player, record, gameTime) -> {
             // TODO change broadcast to partial (players not involved will not receive broadcasts)
             var mgr = player.getServer().getPlayerList();
@@ -216,39 +206,6 @@ public class ItemSpeedrunEvents {
                 });
             }
         });
-
-        try {
-            Class.forName(org.objectweb.asm.Type.getObjectType("org/featurehouse/mcmod/speedrun/alphabeta/item/ItemSpeedrunEvents").getClassName());
-        } catch (ClassNotFoundException e) {
-            if (Platform.getEnvironment() == Env.SERVER) {
-                throw new UnsupportedOperationException("ABS Demo Mod doesn't support dedicated server.\n" +
-                        "Get the full version by mailing to featurehouse@outlook.com");
-            }
-            for (String modId : Arrays.asList("minihud", "xaeros-minimap", "xaerosminimap")) {
-                if (Platform.isModLoaded(modId)) {
-                    throw new UnsupportedOperationException("ABS Demo Mod is not compatible with various mods.\n" +
-                            "Get the full version by mailing to featurehouse@outlook.com");
-                }
-            }
-
-            ClientGuiEvent.RENDER_HUD.register((drawContext, tickDelta) ->
-                    drawContext.drawString(Minecraft.getInstance().font, Component.translatable("demo.speedrun.alphabet"), 10, 10, 0xfffff, true));
-            TickEvent.SERVER_POST.register(server -> {
-                var t = server.overworld().getGameTime();
-                if (t >= 5400) {
-                    if (t > 6000) {
-                        Blaze3D.youJustLostTheGame();
-                    } else if (t % 20 == 0) {
-                        Minecraft.getInstance().getChatListener().handleSystemMessage(Component.translatable("demo.speedrun.alphabet.cd", (6000 - t) / 20), false);
-                    }
-                }
-            });
-            ClientPlayerEvent.CLIENT_PLAYER_JOIN.register(player -> {
-                if (!Minecraft.getInstance().isSingleplayer()) {
-                    player.connection.getConnection().disconnect(Component.translatable("demo.speedrun.alphabet.mp"));
-                }
-            });
-        }
     }
 
     public static void onItemPickup(ServerPlayer player, ItemStack stack) {
@@ -294,7 +251,7 @@ public class ItemSpeedrunEvents {
 
     public static final Logger LOGGER = LogUtils.getLogger();
 
-    public static final DeferredRegister<MenuType<?>> MENU_REG = DeferredRegister.create("alphabet_speedrun", MultiverseHooks.menuKey());
+    public static final DeferredRegister<MenuType<?>> MENU_REG = DeferredRegister.create("alphabet_speedrun", Registries.MENU);
     public static final RegistrySupplier<MenuType<ItemListViewMenu>> MENU_TYPE_R = MENU_REG.register(
             "item_list",
             () -> MenuRegistry.ofExtended(

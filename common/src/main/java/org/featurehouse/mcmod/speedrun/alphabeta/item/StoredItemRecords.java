@@ -21,8 +21,11 @@ package org.featurehouse.mcmod.speedrun.alphabeta.item;
 import com.google.common.base.Suppliers;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import com.mojang.datafixers.util.Either;
 import com.mojang.datafixers.util.Unit;
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.JsonOps;
 import org.featurehouse.mcmod.speedrun.alphabeta.item.command.ItemSpeedrunCommandHandle;
 import org.jetbrains.annotations.Nullable;
 
@@ -55,7 +58,11 @@ public class StoredItemRecords {
     public static CompletableFuture<ItemSpeedrunRecord> readRecord(Path path) {
         return CompletableFuture.<Either<ItemSpeedrunRecord, Throwable>>supplyAsync(() -> {
             try (final BufferedReader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
-                return Either.left(ItemSpeedrunRecord.fromJson(GSON.fromJson(reader, JsonObject.class), true));
+                JsonObject obj = GSON.fromJson(reader, JsonObject.class);
+                return ItemSpeedrunRecord.CODEC.parse(JsonOps.INSTANCE, obj).mapOrElse(
+                        record -> Either.left(record.resetUuid()),
+                        e -> Either.right(new JsonParseException(e.message()))
+                );
             } catch (IOException | RuntimeException e) {
                 return Either.right(e);
             }
@@ -96,7 +103,10 @@ public class StoredItemRecords {
                 player.sendSystemMessage(Component.translatable("command.speedrun.alphabet.archive.empty").withStyle(ChatFormatting.RED));
                 return Either.left(Unit.INSTANCE);
             }
-            final JsonObject json = record.get().toJson();
+            final JsonObject json = ItemSpeedrunRecord.CODEC.encodeStart(JsonOps.INSTANCE, record.get()).flatMap(e -> {
+                if (!e.isJsonObject()) return DataResult.error(() -> "Not a JSON object");
+                return DataResult.success(e.getAsJsonObject());
+            }).getOrThrow();
             Path path = getPath(rootPath(player), player.getUUID(), record.get().recordId());
             try {
                 Files.createDirectories(path.getParent());

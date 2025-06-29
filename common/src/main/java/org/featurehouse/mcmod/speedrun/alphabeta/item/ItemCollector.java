@@ -32,14 +32,6 @@ public interface ItemCollector {
     @MixinSensitive
     void alphabetSpeedrun$setItemRecordAccess(@Nullable ItemRecordAccess record);
 
-    @CheckForNull
-    @Deprecated
-    @MixinSensitive
-    ItemSpeedrunRecord alphabetSpeedrun$getItemRecord();
-    @Deprecated
-    @MixinSensitive
-    void alphabetSpeedrun$setItemRecord(@Nullable ItemSpeedrunRecord record);
-
     @MixinSensitive
     boolean alphabetSpeedrun$moveRecordToHistory();
     @MixinSensitive

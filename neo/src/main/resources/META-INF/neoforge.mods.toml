@@ -34,3 +34,6 @@ mandatory = true
 versionRange = "[17,)"
 ordering = "AFTER"
 side = "BOTH"
+
+[[mixins]]
+config = "alphabet-speedrun.common.mixins.json"
