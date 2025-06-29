@@ -4,6 +4,6 @@
   },
   "items": ["#speedabc:v"],
   "icon": {
-    "item": "vine"
+    "id": "vine"
   }
 }

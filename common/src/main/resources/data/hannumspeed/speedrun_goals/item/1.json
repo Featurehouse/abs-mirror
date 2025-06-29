@@ -4,6 +4,6 @@
   },
   "items": ["#hannumspeed:len_1"],
   "icon": {
-    "item": "arrow"
+    "id": "arrow"
   }
 }

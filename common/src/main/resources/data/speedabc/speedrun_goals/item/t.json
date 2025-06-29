@@ -4,6 +4,6 @@
   },
   "items": ["#speedabc:t"],
   "icon": {
-    "item": "tuff"
+    "id": "tuff"
   }
 }

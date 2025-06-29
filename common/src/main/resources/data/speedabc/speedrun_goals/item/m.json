@@ -4,6 +4,6 @@
   },
   "items": ["#speedabc:m"],
   "icon": {
-    "item": "minecart"
+    "id": "minecart"
   }
 }

@@ -4,6 +4,6 @@
   },
   "items": ["#speedabc:c"],
   "icon": {
-    "item": "cake"
+    "id": "cake"
   }
 }

@@ -4,6 +4,6 @@
   },
   "items": ["#speedabc:o"],
   "icon": {
-    "item": "oak_sign"
+    "id": "oak_sign"
   }
 }

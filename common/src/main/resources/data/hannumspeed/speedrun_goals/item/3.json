@@ -4,6 +4,6 @@
   },
   "items": ["#hannumspeed:len_3"],
   "icon": {
-    "item": "allium"
+    "id": "allium"
   }
 }

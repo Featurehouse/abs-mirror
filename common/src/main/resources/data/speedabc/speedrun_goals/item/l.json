@@ -4,6 +4,6 @@
   },
   "items": ["#speedabc:l"],
   "icon": {
-    "item": "lodestone"
+    "id": "lodestone"
   }
 }

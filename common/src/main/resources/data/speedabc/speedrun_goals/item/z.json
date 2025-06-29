@@ -4,6 +4,6 @@
   },
   "items": ["#speedabc:z"],
   "icon": {
-    "item": "zombie_head"
+    "id": "zombie_head"
   }
 }

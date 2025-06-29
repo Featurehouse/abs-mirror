@@ -4,6 +4,6 @@
   },
   "items": ["#speedabc:h"],
   "icon": {
-    "item": "honey_bottle"
+    "id": "honey_bottle"
   }
 }

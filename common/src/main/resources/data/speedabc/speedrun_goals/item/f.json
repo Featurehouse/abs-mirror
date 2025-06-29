@@ -4,6 +4,6 @@
   },
   "items": ["#speedabc:f"],
   "icon": {
-    "item": "furnace"
+    "id": "furnace"
   }
 }

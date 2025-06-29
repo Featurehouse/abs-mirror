@@ -4,6 +4,6 @@
   },
   "items": ["#speedabc:d"],
   "icon": {
-    "item": "deepslate_emerald_ore"
+    "id": "deepslate_emerald_ore"
   }
 }

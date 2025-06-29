@@ -4,6 +4,6 @@
   },
   "items": ["#speedabc:j"],
   "icon": {
-    "item": "jukebox"
+    "id": "jukebox"
   }
 }

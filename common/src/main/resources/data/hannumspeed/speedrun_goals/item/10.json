@@ -4,6 +4,6 @@
   },
   "items": ["#hannumspeed:len_10"],
   "icon": {
-    "item": "waxed_exposed_cut_copper_slab"
+    "id": "waxed_exposed_cut_copper_slab"
   }
 }

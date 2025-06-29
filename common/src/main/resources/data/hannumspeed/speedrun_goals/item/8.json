@@ -4,6 +4,6 @@
   },
   "items": ["#hannumspeed:len_8"],
   "icon": {
-    "item": "dead_brain_coral_block"
+    "id": "dead_brain_coral_block"
   }
 }

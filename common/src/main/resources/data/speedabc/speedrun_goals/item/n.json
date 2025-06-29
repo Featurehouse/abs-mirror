@@ -4,6 +4,6 @@
   },
   "items": ["#speedabc:n"],
   "icon": {
-    "item": "netherite_block"
+    "id": "netherite_block"
   }
 }

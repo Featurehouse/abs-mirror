@@ -4,6 +4,6 @@
   },
   "items": ["#speedabc:s"],
   "icon": {
-    "item": "sunflower"
+    "id": "sunflower"
   }
 }

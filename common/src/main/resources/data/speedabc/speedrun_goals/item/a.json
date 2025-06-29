@@ -4,6 +4,6 @@
   },
   "items": ["#speedabc:a"],
   "icon": {
-    "item": "apple"
+    "id": "apple"
   }
 }

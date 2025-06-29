@@ -4,6 +4,6 @@
   },
   "items": ["#hannumspeed:len_6"],
   "icon": {
-    "item": "acacia_button"
+    "id": "acacia_button"
   }
 }

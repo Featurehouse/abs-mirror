@@ -4,6 +4,6 @@
   },
   "items": ["#hannumspeed:len_2"],
   "icon": {
-    "item": "anvil"
+    "id": "anvil"
   }
 }

@@ -4,6 +4,6 @@
   },
   "items": ["#speedabc:y"],
   "icon": {
-    "item": "yellow_bed"
+    "id": "yellow_bed"
   }
 }

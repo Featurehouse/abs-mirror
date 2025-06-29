@@ -4,6 +4,6 @@
   },
   "items": ["#hannumspeed:len_7"],
   "icon": {
-    "item": "acacia_chest_boat"
+    "id": "acacia_chest_boat"
   }
 }
