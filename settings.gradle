@@ -28,6 +28,6 @@ pluginManagement {
 include("common")
 include("fabric")
 // Await adaptation
-//include("neo")
+include("neo")
 
 rootProject.name = "alphabet-speedrun"
