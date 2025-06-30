@@ -73,7 +73,7 @@
   "command.speedrun.alphabet.draft.running": "You are already running a record: %s",
   "command.speedrun.alphabet.draft": "Draft is created",
   "command.speedrun.alphabet.draft.dup": "There's an existing draft",
-  "command.speedrun.alphabet.draft.not_found": "You seem haven't create a draft, have you?",
+  "command.speedrun.alphabet.draft.not_found": "You seem haven't created a draft, have you?",
   "command.speedrun.alphabet.draft.query": "Here's the draft you're editing: %s",
   "command.speedrun.alphabet.draft.missing_goal": "Missing goal - you have to specify one.",
   "command.speedrun.alphabet.draft.set_play_type": "Set play type to %s",

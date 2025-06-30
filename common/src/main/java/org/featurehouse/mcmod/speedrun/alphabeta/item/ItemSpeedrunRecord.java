@@ -78,11 +78,11 @@ public final class ItemSpeedrunRecord implements ItemRecordAccess {
                     SingleSpeedrunPredicate.CODEC.listOf().fieldOf("predicates").forGetter(ItemSpeedrunRecord::predicates),
                     Codec.LONG_STREAM.xmap(LongStream::toArray, Arrays::stream).fieldOf("collected").forGetter(ItemSpeedrunRecord::collected),
                     Codec.LONG.fieldOf("start_time").forGetter(ItemSpeedrunRecord::startTime),
-                    Codec.LONG.fieldOf("finish_time").orElse(-1L).forGetter(ItemSpeedrunRecord::finishTime),
-                    Codec.LONG.fieldOf("last_quit_time").orElse(-1L).forGetter(ItemSpeedrunRecord::lastQuitTime),
-                    Codec.LONG.fieldOf("vacant_time").orElse(0L).forGetter(ItemSpeedrunRecord::vacantTime),
-                    ResourceLocation.CODEC.xmap(DefaultItemSpeedrunDifficulty::getDifficulty, ItemSpeedrunDifficulty::getId).fieldOf("difficulty").orElseGet(() -> DefaultItemSpeedrunDifficulty.NN).forGetter(ItemSpeedrunRecord::difficulty),
-                    Codec.unboundedMap(UUIDUtil.STRING_CODEC, UUIDUtil.STRING_CODEC).fieldOf("pvp_mates").orElseGet(Maps::newLinkedHashMap).forGetter(ItemSpeedrunRecord::mates)
+                    Codec.LONG.optionalFieldOf("finish_time", -1L).forGetter(ItemSpeedrunRecord::finishTime),
+                    Codec.LONG.optionalFieldOf("last_quit_time", -1L).orElse(-1L).forGetter(ItemSpeedrunRecord::lastQuitTime),
+                    Codec.LONG.optionalFieldOf("vacant_time", 0L).forGetter(ItemSpeedrunRecord::vacantTime),
+                    ResourceLocation.CODEC.xmap(DefaultItemSpeedrunDifficulty::getDifficulty, ItemSpeedrunDifficulty::getId).optionalFieldOf("difficulty", DefaultItemSpeedrunDifficulty.NN).forGetter(ItemSpeedrunRecord::difficulty),
+                    Codec.unboundedMap(UUIDUtil.STRING_CODEC, UUIDUtil.STRING_CODEC).optionalFieldOf("pvp_mates", Collections.emptyMap()).<Map<UUID, UUID>>xmap(Maps::newLinkedHashMap, Map::copyOf).forGetter(ItemSpeedrunRecord::mates)
             ).apply(instance, ItemSpeedrunRecord::new)
     );
 

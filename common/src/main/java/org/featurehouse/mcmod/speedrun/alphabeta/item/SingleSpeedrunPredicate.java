@@ -18,14 +18,11 @@
 
 package org.featurehouse.mcmod.speedrun.alphabeta.item;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
 import com.mojang.serialization.*;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.advancements.critereon.ItemPredicate;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.GsonHelper;
 import net.minecraft.world.item.ItemStack;
 
 public interface SingleSpeedrunPredicate {
@@ -39,9 +36,6 @@ public interface SingleSpeedrunPredicate {
     }
 
     ItemStack icon();
-
-    //@Deprecated
-    JsonObject serialize();
 
     String predicateType();
 
@@ -65,21 +59,6 @@ public interface SingleSpeedrunPredicate {
             }
     );
 
-    static SingleSpeedrunPredicate deserialize(JsonObject obj) {
-        ItemStack icon = ItemStack.CODEC.parse(JsonOps.INSTANCE, GsonHelper.getAsJsonObject(obj, "icon")).getOrThrow();
-        return switch (GsonHelper.getAsString(obj, "predicate_type")) {
-            case "item" -> {
-                ItemPredicate itemPredicate = ItemPredicate.CODEC.parse(JsonOps.INSTANCE, obj.get("item_predicate")).getOrThrow(JsonParseException::new);
-                yield new OfItemPredicate(itemPredicate, icon);
-            }
-            case "advancement" -> {
-                ResourceLocation advancementId = ResourceLocation.parse(GsonHelper.getAsString(obj, "advancement_id"));
-                yield new OfAdvancement(advancementId, icon);
-            }
-            default -> throw new JsonParseException("Expecting predicate_type as item / advancement, got" + obj.get("predicate_type"));
-        };
-    }
-
     record OfItemPredicate(ItemPredicate predicate, ItemStack icon) implements SingleSpeedrunPredicate {
         @Override
         public boolean testItemStack(ItemStack stack) {
@@ -89,15 +68,6 @@ public interface SingleSpeedrunPredicate {
         @Override
         public ItemStack icon() {
             return icon.copy();
-        }
-
-        @Override
-        public JsonObject serialize() {
-            JsonObject obj = new JsonObject();
-            obj.addProperty("predicate_type", "item");
-            obj.add("item_predicate", ItemPredicate.CODEC.encodeStart(JsonOps.INSTANCE, predicate).getOrThrow());
-            obj.add("icon", ItemStack.CODEC.encodeStart(JsonOps.INSTANCE, icon).getOrThrow());
-            return obj;
         }
 
         @Override
@@ -115,15 +85,6 @@ public interface SingleSpeedrunPredicate {
         @Override
         public ItemStack icon() {
             return icon.copy();
-        }
-
-        @Override
-        public JsonObject serialize() {
-            JsonObject obj = new JsonObject();
-            obj.addProperty("predicate_type", "advancement");
-            obj.addProperty("advancement_id", advancementId.toString());
-            obj.add("icon", ItemStack.CODEC.encodeStart(JsonOps.INSTANCE, icon).getOrThrow());
-            return obj;
         }
 
         @Override

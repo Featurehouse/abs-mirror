@@ -83,13 +83,16 @@ public abstract class ServerPlayerMixin extends Player implements ItemCollector,
     @Inject(method = "addAdditionalSaveData", at = @At("RETURN"))
     private void onWriteToNbt(ValueOutput view, CallbackInfo ci) {
         if (alphabetSpeedrun$currentRecord != null) {
-            JsonObject jsonMeta = GsonHelper.convertToJsonObject(ItemRecordAccess.metaCodec(CoopRecordManager.fromServer(alphabetSpeedrun$getServer()))
+            ItemRecordAccess.metaCodec(CoopRecordManager.fromServer(alphabetSpeedrun$getServer()))
                     .encodeStart(JsonOps.INSTANCE, alphabetSpeedrun$currentRecord)
-                    .mapOrElse(Function.identity(), e -> {
+                    .ifError(e -> {
                         ItemSpeedrunEvents.LOGGER.error("Failed to write player custom data to {}: {}", this.stringUUID, e.message());
-                        return null;
-                    }), "AlphabetSpeedrun_CurrentRecord");
-            JsonYYDS.writeToWriteView(jsonMeta, view, "AlphabetSpeedrun_CurrentRecord");
+                        org.featurehouse.mcmod.speedrun.alphabeta.util.AlphaBetaDebug.log(4, l -> l.info("SPMixin(onWriteToNbt) PartialValue: {}", e.partialValue().orElse(com.google.gson.JsonNull.INSTANCE)));
+                    })
+                    .ifSuccess(e -> {
+                        JsonObject jsonMeta = GsonHelper.convertToJsonObject(e, "AlphabetSpeedrun_CurrentRecord");
+                        JsonYYDS.writeToWriteView(jsonMeta, view, "AlphabetSpeedrun_CurrentRecord");
+                    });
         }
 
         if (this.alphabetSpeedrun$itemRecordHistory != null) {

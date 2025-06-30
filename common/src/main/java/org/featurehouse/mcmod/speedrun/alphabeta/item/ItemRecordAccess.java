@@ -61,6 +61,7 @@ public interface ItemRecordAccess {
 
     static Codec<ItemRecordAccess> metaCodec(CoopRecordManager coopMgr) {
         return Codec.BOOL.orElse(Boolean.FALSE).dispatch("is_coop", ItemRecordAccess::isCoop, isCoop -> {
+            org.featurehouse.mcmod.speedrun.alphabeta.util.AlphaBetaDebug.log(4, l -> l.info("isCoop: {}", isCoop));
             if (isCoop) {
                 return CoopRecord.metaCodec(coopMgr);
             } else {

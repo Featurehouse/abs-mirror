@@ -33,6 +33,9 @@ import java.util.Objects;
 @Environment(EnvType.CLIENT)
 public class ClientItemListScreen extends AbstractContainerScreen<ItemListViewMenu> {
     private static final ResourceLocation TEXTURE_PTH = ResourceLocation.fromNamespaceAndPath("alphabet_speedrun", "textures/gui/view.png");
+    private static final ResourceLocation SPRITE_BACK = ResourceLocation.fromNamespaceAndPath("alphabet_speedrun", "view/back.png");
+    private static final ResourceLocation SPRITE_FORTH = ResourceLocation.fromNamespaceAndPath("alphabet_speedrun", "view/forth.png");
+    private static final int COLOR_COMPLETED = 0x45c545, COLOR_NOT_COMPLETED = 0xc54545;
 
     public ClientItemListScreen(ItemListViewMenu handler, Inventory inventory, Component title) {
         super(handler, inventory, title);
@@ -42,16 +45,19 @@ public class ClientItemListScreen extends AbstractContainerScreen<ItemListViewMe
     protected void renderBg(GuiGraphics context, float delta, int mouseX, int mouseY) {
         context.blit(RenderPipelines.GUI_TEXTURED, TEXTURE_PTH, leftPos, topPos, 0F, 0F, imageWidth, imageHeight, 176, 166);
         // Arrows
-        if (menu.hasPrevPage()) context.blit(RenderPipelines.GUI_TEXTURED, TEXTURE_PTH, leftPos + 7, topPos + 149, 176, 0, imageWidth, imageHeight, 18, 10);
-        if (menu.hasNextPage()) context.blit(RenderPipelines.GUI_TEXTURED, TEXTURE_PTH, leftPos + 151, topPos + 149, 176, 10, imageWidth, imageHeight, 18, 10);
+        if (menu.hasPrevPage()) context.blitSprite(RenderPipelines.GUI_TEXTURED, SPRITE_BACK, 18, 10, 0, 0, leftPos + 7, topPos + 149, 18, 10);
+        if (menu.hasNextPage()) context.blitSprite(RenderPipelines.GUI_TEXTURED, SPRITE_FORTH, 18, 10, 0, 0, leftPos + 151, topPos + 149, 18, 10);
         // Coloring
         for (int k = 0; k < 63; k++) {
             final Boolean slotCompleted = menu.isSlotCompleted(k);
             if (slotCompleted == null) break;
+            final int posX = leftPos + 8 + 18 * (k % 9);
+            final int posY = topPos + 19 + 18 * (k / 9);
+
             if (!slotCompleted) {
-                context.blitSprite(RenderPipelines.GUI_TEXTURED, TEXTURE_PTH, leftPos + 8 + 18 * (k % 9), topPos + 19 + 18 * (k / 9), 0, 166, imageWidth, imageHeight, 16, 16);
+                context.fill(posX, posY, posX + 16, posY + 16, COLOR_NOT_COMPLETED);
             } else {
-                context.blitSprite(RenderPipelines.GUI_TEXTURED, TEXTURE_PTH, leftPos + 8 + 18 * (k % 9), topPos + 19 + 18 * (k / 9), 16, 166, imageWidth, imageHeight, 16, 16);
+                context.fill(posX, posY, posX + 16, posY + 16, COLOR_COMPLETED);
             }
         }
     }
@@ -77,7 +83,6 @@ public class ClientItemListScreen extends AbstractContainerScreen<ItemListViewMe
 
     @Override
     public void render(@NotNull GuiGraphics context, int mouseX, int mouseY, float deltaTicks) {
-        this.renderBackground(context, mouseX, mouseY, deltaTicks);
         super.render(context, mouseX, mouseY, deltaTicks);
         this.renderTooltip(context, mouseX, mouseY);
     }
@@ -85,6 +90,6 @@ public class ClientItemListScreen extends AbstractContainerScreen<ItemListViewMe
     @Override
     protected void renderLabels(GuiGraphics context, int mouseX, int mouseY) {
         // Don't draw inventory title
-        context.drawString(font, this.title, this.titleLabelX, this.titleLabelY, 4210752, false);
+        context.drawString(font, this.title, this.titleLabelX, this.titleLabelY, 0xff404040, false);
     }
 }

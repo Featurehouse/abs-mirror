@@ -158,7 +158,6 @@ public sealed interface ItemPredicateProvider {
     }
 
     final class Impl {
-
         private static ItemPredicate parseItemPredicate(JsonObject object) {
             return ItemPredicate.CODEC.parse(JsonOps.INSTANCE, object).getOrThrow(JsonParseException::new);
         }
@@ -315,13 +314,6 @@ public sealed interface ItemPredicateProvider {
                         @Override
                         public ItemStack icon() {
                             return icon;
-                        }
-
-                        @Override
-                        public JsonObject serialize() {
-                            JsonObject obj = p.serialize();
-                            obj.add("icon", ItemStack.CODEC.encodeStart(JsonOps.INSTANCE, icon).getOrThrow());
-                            return obj;
                         }
 
                         @Override

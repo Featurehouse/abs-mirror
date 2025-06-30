@@ -121,7 +121,7 @@ public class ItemSpeedrunCommands {
                                         s.getSource().sendFailure(err.get());
                                         return 0;
                                     } else {
-                                        s.getSource().sendSystemMessage(Component.translatable("command.speedrun.alphabet.draft"));
+                                        s.getSource().sendSuccess(() -> Component.translatable("command.speedrun.alphabet.draft"), false);
                                         return 1;
                                     }
                                 }))
@@ -133,7 +133,7 @@ public class ItemSpeedrunCommands {
                                         s.getSource().sendFailure(Component.translatable("command.speedrun.alphabet.draft.not_found"));
                                         return 0;
                                     }
-                                    s.getSource().sendSystemMessage(Component.translatable("command.speedrun.alphabet.draft.query", draft.snapshot().asText()));
+                                    s.getSource().sendSuccess(() -> Component.translatable("command.speedrun.alphabet.draft.query", draft.snapshot().asText()), false);
                                     return 1;
                                 }))
                         )
@@ -149,7 +149,7 @@ public class ItemSpeedrunCommands {
                                             }
                                             ResourceLocation id = ResourceLocationArgument.getId(s, "goal");
                                             draft.setGoal(id);
-                                            s.getSource().sendSystemMessage(Component.translatable("command.speedrun.alphabet.draft.set_goal", id));
+                                            s.getSource().sendSuccess(() -> Component.translatable("command.speedrun.alphabet.draft.set_goal", id), false);
                                             return 1;
                                         }))
                                 )
